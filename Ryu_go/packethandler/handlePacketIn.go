@@ -136,5 +136,5 @@ func sendPacketOut(packet utils.PacketData, outPort uint32, inPort uint32) {
 		return
 	}
 	defer resp.Body.Close()
-	log.Println("Flow entry added successfully.")
+	log.Println("packet out sent successfully.")
 }
