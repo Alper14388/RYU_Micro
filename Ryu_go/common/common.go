@@ -8,5 +8,5 @@ type PacketInWrapper struct {
 		Reason   uint8  `json:"reason"`
 		TotalLen uint16 `json:"total_len"`
 	} `json:"OFPPacketIn"`
-	DatapathID uint64 `json:"dpid"`
+	DatapathID uint32 `json:"dpid"`
 }

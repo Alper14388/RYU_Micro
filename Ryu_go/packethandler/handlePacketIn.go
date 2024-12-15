@@ -11,10 +11,11 @@ import (
 )
 
 const (
-	OFPPFlood   = 0xfffffffb
-	OFPNoBuffer = 0xffffffff
-	TopologyURL = "http://127.0.0.1:8093/topology"
-	AddFlowURL  = "http://127.0.0.1:8092/addflow"
+	OFPPFlood    = 0xfffffffb
+	OFPNoBuffer  = 0xffffffff
+	TopologyURL  = "http://127.0.0.1:8093/topology"
+	AddFlowURL   = "http://127.0.0.1:8092/flowadd"
+	PacketOutUrl = "http://127.0.0.1:8092/packetout"
 )
 
 type FlowEntry struct {
@@ -24,10 +25,10 @@ type FlowEntry struct {
 	Priority    uint16                 `json:"priority"`
 }
 
-var macToPort = make(map[uint64]map[string]uint32)
+var macToPort = make(map[uint32]map[string]uint32)
 var macToPortLock sync.RWMutex
 
-func updateMacToPort(dpid uint64, src string, inPort uint32) {
+func updateMacToPort(dpid uint32, src string, inPort uint32) {
 	macToPortLock.Lock()
 	defer macToPortLock.Unlock()
 
@@ -40,7 +41,7 @@ func updateMacToPort(dpid uint64, src string, inPort uint32) {
 	log.Printf("Updated MAC-to-Port mapping: DPID=%d, SRC=%s, IN_PORT=%d", dpid, src, inPort)
 }
 
-func outPortLookup(dpid uint64, dst string) uint32 {
+func outPortLookup(dpid uint32, dst string) uint32 {
 	macToPortLock.RLock()
 	defer macToPortLock.RUnlock()
 
@@ -77,10 +78,10 @@ func HandlePacketIn(w http.ResponseWriter, r *http.Request) {
 	updateMacToPort(packetInfo.DPID, packetInfo.Src, packet.OFPPacketIn.InPort)
 
 	outPort := outPortLookup(packetInfo.DPID, packetInfo.Dst)
-
 	if outPort != OFPPFlood {
 		go addFlowEntry(packetInfo, outPort, packet.OFPPacketIn.InPort)
 	}
+	go sendPacketOut(packetInfo, outPort, packet.OFPPacketIn.InPort)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -107,9 +108,29 @@ func addFlowEntry(packet utils.PacketData, outPort uint32, inPort uint32) {
 		"priority":     1,
 		"hard_timeout": 5,
 		"idle_timeout": 5,
+		"bufferID":     packet.BufferID,
 	}
 	data, _ := json.Marshal(flow)
 	resp, err := http.Post(AddFlowURL, "application/json", bytes.NewReader(data))
+	if err != nil {
+		log.Printf("Error adding flow entry: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+	log.Println("Flow entry added successfully.")
+}
+
+func sendPacketOut(packet utils.PacketData, outPort uint32, inPort uint32) {
+	log.Println("Sending packet out for packet.")
+	packetBuild := map[string]interface{}{
+		"switch_id": packet.DPID,
+		"in_port":   inPort,
+		"out_port":  outPort,
+		"data":      packet.Data,
+		"buffer_id": packet.BufferID,
+	}
+	data, _ := json.Marshal(packetBuild)
+	resp, err := http.Post(PacketOutUrl, "application/json", bytes.NewReader(data))
 	if err != nil {
 		log.Printf("Error adding flow entry: %v", err)
 		return

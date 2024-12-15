@@ -8,9 +8,10 @@ import (
 )
 
 type PacketData struct {
+	BufferID    uint32 `json:"buffer_id"`
 	EncodedData string `json:"encoded_data"`
 	Data        []byte `json:"data"`
-	DPID        uint64 `json:"dpid"`
+	DPID        uint32 `json:"dpid"`
 	IsLLDP      bool   `json:"is_lldp"`
 	Dst         string `json:"dst,omitempty"`
 	Src         string `json:"src,omitempty"`
@@ -39,6 +40,7 @@ func ExtractData(packet common.PacketInWrapper) (PacketData, error) {
 
 	// Populate PacketData
 	packetInfo := PacketData{
+		BufferID:    packet.OFPPacketIn.BufferID,
 		EncodedData: packet.OFPPacketIn.Data,
 		Data:        decodedData,
 		DPID:        packet.DatapathID,
