@@ -25,12 +25,14 @@ type FlowEntry struct {
 	Priority    uint16                 `json:"priority"`
 }
 
-var macToPort = make(map[uint32]map[string]uint32)
+var macToPort = make(map[uint64]map[string]uint32)
 var macToPortLock sync.RWMutex
 
-func updateMacToPort(dpid uint32, src string, inPort uint32) {
+func updateMacToPort(dpid uint64, src string, inPort uint32) {
 	macToPortLock.Lock()
 	defer macToPortLock.Unlock()
+
+	log.Println("updateMacToPort", src, inPort)
 
 	if _, exists := macToPort[dpid]; !exists {
 		macToPort[dpid] = make(map[string]uint32)
@@ -41,10 +43,10 @@ func updateMacToPort(dpid uint32, src string, inPort uint32) {
 	log.Printf("Updated MAC-to-Port mapping: DPID=%d, SRC=%s, IN_PORT=%d", dpid, src, inPort)
 }
 
-func outPortLookup(dpid uint32, dst string) uint32 {
+func outPortLookup(dpid uint64, dst string) uint32 {
 	macToPortLock.RLock()
 	defer macToPortLock.RUnlock()
-
+	log.Println("outPortLookup", dst)
 	if ports, exists := macToPort[dpid]; exists {
 		if outPort, found := ports[dst]; found {
 			log.Printf("Out port found: DPID=%d, DST=%s, OUT_PORT=%d", dpid, dst, outPort)
@@ -55,6 +57,7 @@ func outPortLookup(dpid uint32, dst string) uint32 {
 	log.Printf("Out port not found, flooding: DPID=%d, DST=%s", dpid, dst)
 	return OFPPFlood
 }
+
 func HandlePacketIn(w http.ResponseWriter, r *http.Request) {
 	var packet common.PacketInWrapper
 	if err := json.NewDecoder(r.Body).Decode(&packet); err != nil {
@@ -75,13 +78,11 @@ func HandlePacketIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updateMacToPort(packetInfo.DPID, packetInfo.Src, packet.OFPPacketIn.InPort)
+	updateMacToPort(packetInfo.DPID, packetInfo.Src, extractInPort(packet))
 
 	outPort := outPortLookup(packetInfo.DPID, packetInfo.Dst)
-	if outPort != OFPPFlood {
-		go addFlowEntry(packetInfo, outPort, packet.OFPPacketIn.InPort)
-	}
-	go sendPacketOut(packetInfo, outPort, packet.OFPPacketIn.InPort)
+	go addFlowEntry(packetInfo, outPort, extractInPort(packet))
+	go sendPacketOut(packetInfo, outPort, extractInPort(packet))
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -106,8 +107,8 @@ func addFlowEntry(packet utils.PacketData, outPort uint32, inPort uint32) {
 		"in_port":      inPort,
 		"out_port":     outPort,
 		"priority":     1,
-		"hard_timeout": 5,
-		"idle_timeout": 5,
+		"hard_timeout": 30,
+		"idle_timeout": 30,
 		"bufferID":     packet.BufferID,
 	}
 	data, _ := json.Marshal(flow)
@@ -132,9 +133,20 @@ func sendPacketOut(packet utils.PacketData, outPort uint32, inPort uint32) {
 	data, _ := json.Marshal(packetBuild)
 	resp, err := http.Post(PacketOutUrl, "application/json", bytes.NewReader(data))
 	if err != nil {
-		log.Printf("Error adding flow entry: %v", err)
+		log.Printf("Error sending packet out: %v", err)
 		return
 	}
 	defer resp.Body.Close()
-	log.Println("packet out sent successfully.")
+	log.Println("Packet out sent successfully.")
+}
+
+func extractInPort(packet common.PacketInWrapper) uint32 {
+	for _, field := range packet.OFPPacketIn.Match.OFPMatch.OxmFields {
+		if field.OXMTlv.Field == "in_port" {
+			if inPort, ok := field.OXMTlv.Value.(float64); ok {
+				return uint32(inPort)
+			}
+		}
+	}
+	return 0
 }

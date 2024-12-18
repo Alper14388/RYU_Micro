@@ -11,10 +11,11 @@ type PacketData struct {
 	BufferID    uint32 `json:"buffer_id"`
 	EncodedData string `json:"encoded_data"`
 	Data        []byte `json:"data"`
-	DPID        uint32 `json:"dpid"`
+	DPID        uint64 `json:"dpid"`
 	IsLLDP      bool   `json:"is_lldp"`
 	Dst         string `json:"dst,omitempty"`
 	Src         string `json:"src,omitempty"`
+	InPort      uint32 `json:"in_port,omitempty"`
 }
 
 type EthernetFrame struct {
@@ -28,6 +29,7 @@ const (
 	EthTypeLLDP = 0x88CC
 )
 
+// ExtractData extracts relevant data from the PacketInWrapper.
 func ExtractData(packet common.PacketInWrapper) (PacketData, error) {
 	// Decode the base64 data
 	decodedData, err := base64.StdEncoding.DecodeString(packet.OFPPacketIn.Data)
@@ -38,6 +40,13 @@ func ExtractData(packet common.PacketInWrapper) (PacketData, error) {
 	// Parse the Ethernet frame
 	frame := ParseEthernetFrame(decodedData)
 
+	// Extract in_port from match fields
+	inPort, err := extractInPort(packet)
+	if err != nil {
+		log.Println("Error extracting in_port:", err)
+		inPort = 0 // Default to 0 if extraction fails
+	}
+
 	// Populate PacketData
 	packetInfo := PacketData{
 		BufferID:    packet.OFPPacketIn.BufferID,
@@ -45,6 +54,7 @@ func ExtractData(packet common.PacketInWrapper) (PacketData, error) {
 		Data:        decodedData,
 		DPID:        packet.DatapathID,
 		IsLLDP:      frame.Ethertype == EthTypeLLDP,
+		InPort:      inPort,
 	}
 
 	if !packetInfo.IsLLDP {
@@ -71,4 +81,18 @@ func ParseEthernetFrame(data []byte) EthernetFrame {
 		Src:       src,
 		Ethertype: ethertype,
 	}
+}
+
+// extractInPort extracts the in_port from match fields in the packet.
+func extractInPort(packet common.PacketInWrapper) (uint32, error) {
+	match := packet.OFPPacketIn.Match.OFPMatch
+	for _, field := range match.OxmFields {
+		if field.OXMTlv.Field == "in_port" {
+			if inPort, ok := field.OXMTlv.Value.(float64); ok {
+				return uint32(inPort), nil
+			}
+			return 0, fmt.Errorf("unexpected in_port value type: %T", field.OXMTlv.Value)
+		}
+	}
+	return 0, fmt.Errorf("in_port not found in match fields")
 }

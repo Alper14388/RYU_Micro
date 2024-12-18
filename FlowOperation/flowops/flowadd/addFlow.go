@@ -29,10 +29,12 @@ func AddFlow(w http.ResponseWriter, r *http.Request) {
 		log.Println("Error decoding request body:", err)
 		return
 	}
-	log.Println("new flow add:", request)
+	log.Println("New flow add request:", request)
+
 	match := newMatch(request)
 	flowMod := newFlowMod(request, match)
-	log.Println("flowMod", flowMod)
+	log.Println("FlowMod:", flowMod)
+
 	if err := switchop.SendToSwitch(request.SwitchID, flowMod); err != nil {
 		http.Error(w, "Failed to add flow", http.StatusInternalServerError)
 		log.Println("Error sending FlowMod to switch:", err)
@@ -53,7 +55,7 @@ func uint32ToXMValue(value uint32) ofp.XMValue {
 }
 
 func stringToXMValue(value string) ofp.XMValue {
-	return ofp.XMValue(value)
+	return ofp.XMValue([]byte(value))
 }
 
 func newMatch(request Request) ofp.Match {
@@ -77,7 +79,6 @@ func newMatch(request Request) ofp.Match {
 			},
 		},
 	}
-
 	return match
 }
 
