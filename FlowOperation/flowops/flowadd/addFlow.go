@@ -1,12 +1,11 @@
 package flowadd
 
 import (
-	cmpb "Connection_Manager/proto"
-	pb "FlowOperation/proto"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
+	pb "sdn/common/proto"
 
 	"github.com/netrack/openflow/ofp"
 	"google.golang.org/grpc"
@@ -108,8 +107,8 @@ func sendFlowAddToSwitch(flowMod *ofp.FlowMod) error {
 	}
 	defer conn.Close()
 
-	client := cmpb.NewConnectionManagerClient(conn)
-	req := &cmpb.FlowModRequest{
+	client := pb.NewConnectionManagerClient(conn)
+	req := &pb.FlowModRequest{
 		Data: data,
 	}
 

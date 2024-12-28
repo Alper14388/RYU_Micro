@@ -1,13 +1,11 @@
 package packetout
 
 import (
-	cmpb "Connection_Manager/proto"
-	pb "FlowOperation/proto"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
+	pb "sdn/common/proto"
 
 	"github.com/netrack/openflow/ofp"
 	"google.golang.org/grpc"
@@ -16,18 +14,8 @@ import (
 func PacketOutGRPC(req *pb.PacketOutRequest) (*pb.PacketOutResponse, error) {
 	log.Println("PacketOut Endpoint Hit")
 
-	// Decode base64 data
-	data, err := base64.StdEncoding.DecodeString(req.Data)
-	if err != nil {
-		log.Println("Error decoding base64 data:", err)
-		return &pb.PacketOutResponse{
-			Success: false,
-			Message: "Invalid data format in request (not base64)",
-		}, err
-	}
-
 	// Create PacketOut message
-	packetOut := newPacketFromGRPC(req, data)
+	packetOut := newPacketFromGRPC(req, req.Data)
 
 	if err := sendPacketToSwitch(&packetOut); err != nil {
 		log.Println("Error sending packet out to switch:", err)
@@ -72,8 +60,8 @@ func sendPacketToSwitch(packetOut *ofp.PacketOut) error {
 	}
 	defer conn.Close()
 
-	client := cmpb.NewConnectionManagerClient(conn)
-	req := &cmpb.PacketOutRequest{
+	client := pb.NewConnectionManagerClient(conn)
+	req := &pb.PacketOutRequest{
 		Data: data,
 	}
 

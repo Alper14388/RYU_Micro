@@ -1,21 +1,20 @@
 package main
 
 import (
-	pb "Connection_Manager/proto"
 	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/netrack/openflow/ofp"
+	"google.golang.org/grpc"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	pb "sdn/common/proto"
 	"sync"
 	"time"
-
-	"github.com/netrack/openflow/ofp"
-	"google.golang.org/grpc"
 )
 
 type server struct {

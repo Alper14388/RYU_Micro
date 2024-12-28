@@ -1,10 +1,10 @@
 package utils
 
 import (
-	"Ryu_go/common"
 	"encoding/base64"
 	"fmt"
 	"log"
+	pb "sdn/common/proto"
 )
 
 type PacketData struct {
@@ -29,32 +29,22 @@ const (
 	EthTypeLLDP = 0x88CC
 )
 
-// ExtractData extracts relevant data from the PacketInWrapper.
-func ExtractData(packet common.PacketInWrapper) (PacketData, error) {
-	// Decode the base64 data
-	decodedData, err := base64.StdEncoding.DecodeString(packet.Data)
+// ExtractDataFromPacketIn extracts relevant data from the PacketInRequest.
+func ExtractDataFromPacketIn(req *pb.PacketInRequest) (PacketData, error) {
+	decodedData, err := base64.StdEncoding.DecodeString(string(req.Data))
 	if err != nil {
 		return PacketData{}, fmt.Errorf("failed to decode base64 data: %w", err)
 	}
 
-	// Parse the Ethernet frame
 	frame := ParseEthernetFrame(decodedData)
 
-	// Extract in_port from match fields
-	inPort, err := extractInPort(packet)
-	if err != nil {
-		log.Println("Error extracting in_port:", err)
-		inPort = 0 // Default to 0 if extraction fails
-	}
-
-	// Populate PacketData
 	packetInfo := PacketData{
-		BufferID:    packet.Buffer,
-		EncodedData: packet.Data,
+		BufferID:    req.BufferId,
+		EncodedData: string(req.Data),
 		Data:        decodedData,
-		DPID:        1,
+		DPID:        req.SwitchId,
 		IsLLDP:      frame.Ethertype == EthTypeLLDP,
-		InPort:      inPort,
+		InPort:      req.InPort,
 	}
 
 	if !packetInfo.IsLLDP {
@@ -71,7 +61,6 @@ func ParseEthernetFrame(data []byte) EthernetFrame {
 		log.Println("Frame too short to parse Ethernet header")
 		return EthernetFrame{}
 	}
-
 	dst := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", data[0], data[1], data[2], data[3], data[4], data[5])
 	src := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", data[6], data[7], data[8], data[9], data[10], data[11])
 	ethertype := uint16(data[12])<<8 | uint16(data[13])
@@ -81,20 +70,4 @@ func ParseEthernetFrame(data []byte) EthernetFrame {
 		Src:       src,
 		Ethertype: ethertype,
 	}
-}
-
-// extractInPort extracts the in_port from match fields in the packet.
-func extractInPort(packet common.PacketInWrapper) (uint32, error) {
-	for _, field := range packet.Match.Fields {
-		if field.Class == 32768 && field.Type == 0 { // "in_port" corresponds to Class: 32768, Type: 0
-			decodedValue, err := base64.StdEncoding.DecodeString(field.Value)
-			if err != nil {
-				return 0, fmt.Errorf("failed to decode in_port value: %w", err)
-			}
-			if len(decodedValue) >= 4 {
-				return uint32(decodedValue[0])<<24 | uint32(decodedValue[1])<<16 | uint32(decodedValue[2])<<8 | uint32(decodedValue[3]), nil
-			}
-		}
-	}
-	return 0, fmt.Errorf("in_port not found in match fields")
 }

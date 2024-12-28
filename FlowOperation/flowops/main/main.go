@@ -1,12 +1,12 @@
 package main
 
 import (
-	"FlowOperation/flowops/flowadd"
-	"FlowOperation/flowops/packetout"
-	pb "FlowOperation/proto"
 	"context"
 	"log"
 	"net"
+	"sdn/FlowOperation/flowops/flowadd"
+	"sdn/FlowOperation/flowops/packetout"
+	pb "sdn/common/proto"
 
 	"google.golang.org/grpc"
 )

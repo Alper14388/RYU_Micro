@@ -12,7 +12,7 @@ type PacketInWrapper struct {
 			Class uint16      `json:"Class"`
 			Type  uint8       `json:"Type"`
 			Value string      `json:"Value"` // Base64 string
-			Mask  interface{} `json:"Mask"`  // Opsiyonel, null olabilir
+			Mask  interface{} `json:"Mask"`  // Optional, null olabilir
 		} `json:"Fields"`
 	} `json:"Match"`
 	Data string `json:"Data"` // Base64 string

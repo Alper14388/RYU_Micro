@@ -1,12 +1,13 @@
-module sdn/Ryu_go
+module sdn/Connection_Manager
 
 go 1.22
 
 toolchain go1.23.4
 
 require (
+	github.com/netrack/openflow v0.1.0
 	google.golang.org/grpc v1.69.2
-	sdn v0.0.0-00010101000000-000000000000
+	sdn v0.0.0
 )
 
 require (
