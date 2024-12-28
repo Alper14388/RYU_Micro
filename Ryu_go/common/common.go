@@ -1,26 +1,19 @@
 package common
 
 type PacketInWrapper struct {
-	OFPPacketIn struct {
-		BufferID uint32 `json:"buffer_id"`
-		Cookie   uint64 `json:"cookie"`
-		Data     string `json:"data"`
-		Match    struct {
-			OFPMatch struct {
-				OxmFields []struct {
-					OXMTlv struct {
-						Field string      `json:"field"`
-						Value interface{} `json:"value"`
-						Mask  interface{} `json:"mask"`
-					} `json:"OXMTlv"`
-				} `json:"oxm_fields"`
-				Length uint16 `json:"length"`
-				Type   uint16 `json:"type"`
-			} `json:"OFPMatch"`
-		} `json:"match"`
-		Reason   uint8  `json:"reason"`
-		TableID  uint8  `json:"table_id"`
-		TotalLen uint16 `json:"total_len"`
-	} `json:"OFPPacketIn"`
-	DatapathID uint64 `json:"dpid"`
+	Buffer uint32 `json:"Buffer"`
+	Length uint16 `json:"Length"`
+	Reason uint8  `json:"Reason"`
+	Table  uint8  `json:"Table"`
+	Cookie uint64 `json:"Cookie"`
+	Match  struct {
+		Type   uint16 `json:"Type"`
+		Fields []struct {
+			Class uint16      `json:"Class"`
+			Type  uint8       `json:"Type"`
+			Value string      `json:"Value"` // Base64 string
+			Mask  interface{} `json:"Mask"`  // Opsiyonel, null olabilir
+		} `json:"Fields"`
+	} `json:"Match"`
+	Data string `json:"Data"` // Base64 string
 }

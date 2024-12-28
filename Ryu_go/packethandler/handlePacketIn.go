@@ -78,11 +78,11 @@ func HandlePacketIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updateMacToPort(packetInfo.DPID, packetInfo.Src, extractInPort(packet))
+	updateMacToPort(packetInfo.DPID, packetInfo.Src, packetInfo.InPort)
 
 	outPort := outPortLookup(packetInfo.DPID, packetInfo.Dst)
-	go addFlowEntry(packetInfo, outPort, extractInPort(packet))
-	go sendPacketOut(packetInfo, outPort, extractInPort(packet))
+	go addFlowEntry(packetInfo, outPort, packetInfo.InPort)
+	go sendPacketOut(packetInfo, outPort, packetInfo.InPort)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -138,15 +138,4 @@ func sendPacketOut(packet utils.PacketData, outPort uint32, inPort uint32) {
 	}
 	defer resp.Body.Close()
 	log.Println("Packet out sent successfully.")
-}
-
-func extractInPort(packet common.PacketInWrapper) uint32 {
-	for _, field := range packet.OFPPacketIn.Match.OFPMatch.OxmFields {
-		if field.OXMTlv.Field == "in_port" {
-			if inPort, ok := field.OXMTlv.Value.(float64); ok {
-				return uint32(inPort)
-			}
-		}
-	}
-	return 0
 }

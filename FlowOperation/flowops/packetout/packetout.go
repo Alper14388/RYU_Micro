@@ -1,7 +1,7 @@
 package packetout
 
 import (
-	switchop "FlowOperation/flowops/switch"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"github.com/netrack/openflow/ofp"
@@ -39,11 +39,8 @@ func PacketOut(w http.ResponseWriter, r *http.Request) {
 	// Create PacketOut message
 	packetOut := newPacket(request, data)
 
-	// Send PacketOut to switch
-	if err := switchop.SendToSwitch(request.SwitchID, &packetOut); err != nil {
-		http.Error(w, "Failed to send packet out", http.StatusInternalServerError)
-		log.Println("Error sending PacketOut to switch:", err)
-		return
+	if err := sendPacketToSwitch(&packetOut); err != nil {
+		log.Println("Error sending flow add to switch:", err)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -62,4 +59,22 @@ func newPacket(request PacketOutRequest, data []byte) ofp.PacketOut {
 		Data: data,
 	}
 	return packetOut
+}
+
+func sendPacketToSwitch(flowMod *ofp.PacketOut) error {
+
+	data, err := json.Marshal(flowMod)
+	if err != nil {
+		log.Println("Packetout marshal error:", err)
+		return err
+	}
+	url := "http://127.0.0.1:8094/sendpacketout"
+	resp, err := http.Post(url, "application/json", bytes.NewReader(data))
+	if err != nil {
+		log.Println("Forward Packetout error:", err)
+		return err
+	}
+	defer resp.Body.Close()
+	log.Printf(" Forwarded packetout to %s, got status=%s\n", url, resp.Status)
+	return nil
 }

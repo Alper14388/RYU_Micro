@@ -32,7 +32,7 @@ const (
 // ExtractData extracts relevant data from the PacketInWrapper.
 func ExtractData(packet common.PacketInWrapper) (PacketData, error) {
 	// Decode the base64 data
-	decodedData, err := base64.StdEncoding.DecodeString(packet.OFPPacketIn.Data)
+	decodedData, err := base64.StdEncoding.DecodeString(packet.Data)
 	if err != nil {
 		return PacketData{}, fmt.Errorf("failed to decode base64 data: %w", err)
 	}
@@ -49,10 +49,10 @@ func ExtractData(packet common.PacketInWrapper) (PacketData, error) {
 
 	// Populate PacketData
 	packetInfo := PacketData{
-		BufferID:    packet.OFPPacketIn.BufferID,
-		EncodedData: packet.OFPPacketIn.Data,
+		BufferID:    packet.Buffer,
+		EncodedData: packet.Data,
 		Data:        decodedData,
-		DPID:        packet.DatapathID,
+		DPID:        1,
 		IsLLDP:      frame.Ethertype == EthTypeLLDP,
 		InPort:      inPort,
 	}
@@ -85,13 +85,15 @@ func ParseEthernetFrame(data []byte) EthernetFrame {
 
 // extractInPort extracts the in_port from match fields in the packet.
 func extractInPort(packet common.PacketInWrapper) (uint32, error) {
-	match := packet.OFPPacketIn.Match.OFPMatch
-	for _, field := range match.OxmFields {
-		if field.OXMTlv.Field == "in_port" {
-			if inPort, ok := field.OXMTlv.Value.(float64); ok {
-				return uint32(inPort), nil
+	for _, field := range packet.Match.Fields {
+		if field.Class == 32768 && field.Type == 0 { // "in_port" corresponds to Class: 32768, Type: 0
+			decodedValue, err := base64.StdEncoding.DecodeString(field.Value)
+			if err != nil {
+				return 0, fmt.Errorf("failed to decode in_port value: %w", err)
 			}
-			return 0, fmt.Errorf("unexpected in_port value type: %T", field.OXMTlv.Value)
+			if len(decodedValue) >= 4 {
+				return uint32(decodedValue[0])<<24 | uint32(decodedValue[1])<<16 | uint32(decodedValue[2])<<8 | uint32(decodedValue[3]), nil
+			}
 		}
 	}
 	return 0, fmt.Errorf("in_port not found in match fields")

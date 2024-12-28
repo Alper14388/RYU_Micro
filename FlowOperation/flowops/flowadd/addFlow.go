@@ -1,7 +1,7 @@
 package flowadd
 
 import (
-	switchop "FlowOperation/flowops/switch"
+	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -35,10 +35,8 @@ func AddFlow(w http.ResponseWriter, r *http.Request) {
 	flowMod := newFlowMod(request, match)
 	log.Println("FlowMod:", flowMod)
 
-	if err := switchop.SendToSwitch(request.SwitchID, flowMod); err != nil {
-		http.Error(w, "Failed to add flow", http.StatusInternalServerError)
-		log.Println("Error sending FlowMod to switch:", err)
-		return
+	if err := sendFlowAddToSwitch(flowMod); err != nil {
+		log.Println("Error sending flow add to switch:", err)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -94,11 +92,31 @@ func newFlowMod(request Request, match ofp.Match) *ofp.FlowMod {
 			&ofp.InstructionApplyActions{
 				Actions: []ofp.Action{
 					&ofp.ActionOutput{
-						Port: ofp.PortNo(request.OutPort),
+						Port:   ofp.PortNo(request.OutPort),
+						MaxLen: ofp.ContentLenMax,
 					},
 				},
 			},
 		},
 	}
 	return flowMod
+}
+
+func sendFlowAddToSwitch(flowMod *ofp.FlowMod) error {
+
+	data, err := json.Marshal(flowMod)
+	if err != nil {
+		log.Println("FlowAdd marshal error:", err)
+		return err
+	}
+	log.Println(string(data))
+	url := "http://127.0.0.1:8094/sendflowmod"
+	resp, err := http.Post(url, "application/json", bytes.NewReader(data))
+	if err != nil {
+		log.Println("Forward FlowAdd error:", err)
+		return err
+	}
+	defer resp.Body.Close()
+	log.Printf(" Forwarded FlowAdd to %s, got status=%s\n", url, resp.Status)
+	return nil
 }
