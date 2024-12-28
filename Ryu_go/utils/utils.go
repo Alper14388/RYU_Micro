@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"Project/common"
+	"Ryu_go/common"
 	"encoding/base64"
 	"fmt"
 	"log"

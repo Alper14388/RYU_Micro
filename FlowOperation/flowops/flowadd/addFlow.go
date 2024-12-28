@@ -1,46 +1,38 @@
 package flowadd
 
 import (
-	"bytes"
+	cmpb "Connection_Manager/proto"
+	pb "FlowOperation/proto"
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
-	"net/http"
 
 	"github.com/netrack/openflow/ofp"
+	"google.golang.org/grpc"
 )
 
-type Request struct {
-	SwitchID    uint64 `json:"switch_id"`
-	InPort      uint32 `json:"in_port"`
-	Src         string `json:"src"`
-	Dst         string `json:"dst"`
-	OutPort     uint32 `json:"out_port"`
-	Priority    uint16 `json:"priority"`
-	HardTimeout uint16 `json:"hard_timeout"`
-	IdleTimeout uint16 `json:"idle_timeout"`
-	BufferID    uint32 `json:"buffer_id"`
-}
+func AddFlowGRPC(req *pb.FlowAddRequest) (*pb.FlowAddResponse, error) {
+	log.Println("AddFlowGRPC called")
+	log.Println("New flow add request:", req)
 
-func AddFlow(w http.ResponseWriter, r *http.Request) {
-	log.Println("AddFlow called")
-	var request Request
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid flow add request format", http.StatusBadRequest)
-		log.Println("Error decoding request body:", err)
-		return
-	}
-	log.Println("New flow add request:", request)
-
-	match := newMatch(request)
-	flowMod := newFlowMod(request, match)
+	match := newMatchFromGRPC(req)
+	flowMod := newFlowModFromGRPC(req, match)
 	log.Println("FlowMod:", flowMod)
 
 	if err := sendFlowAddToSwitch(flowMod); err != nil {
 		log.Println("Error sending flow add to switch:", err)
+		return &pb.FlowAddResponse{
+			Success: false,
+			Message: err.Error(),
+		}, err
 	}
 
-	w.WriteHeader(http.StatusOK)
-	log.Println("Flow added successfully:", request)
+	log.Println("Flow added successfully:", req)
+	return &pb.FlowAddResponse{
+		Success: true,
+		Message: "Flow added successfully",
+	}, nil
 }
 
 func uint32ToXMValue(value uint32) ofp.XMValue {
@@ -56,7 +48,7 @@ func stringToXMValue(value string) ofp.XMValue {
 	return ofp.XMValue([]byte(value))
 }
 
-func newMatch(request Request) ofp.Match {
+func newMatchFromGRPC(request *pb.FlowAddRequest) ofp.Match {
 	match := ofp.Match{
 		Type: ofp.MatchTypeXM,
 		Fields: []ofp.XM{
@@ -80,14 +72,14 @@ func newMatch(request Request) ofp.Match {
 	return match
 }
 
-func newFlowMod(request Request, match ofp.Match) *ofp.FlowMod {
+func newFlowModFromGRPC(request *pb.FlowAddRequest, match ofp.Match) *ofp.FlowMod {
 	flowMod := &ofp.FlowMod{
-		Buffer:      request.BufferID,
+		Buffer:      request.BufferId,
 		Command:     ofp.FlowAdd,
 		Match:       match,
-		IdleTimeout: request.IdleTimeout,
-		HardTimeout: request.HardTimeout,
-		Priority:    request.Priority,
+		IdleTimeout: uint16(request.IdleTimeout),
+		HardTimeout: uint16(request.HardTimeout),
+		Priority:    uint16(request.Priority),
 		Instructions: ofp.Instructions{
 			&ofp.InstructionApplyActions{
 				Actions: []ofp.Action{
@@ -103,20 +95,35 @@ func newFlowMod(request Request, match ofp.Match) *ofp.FlowMod {
 }
 
 func sendFlowAddToSwitch(flowMod *ofp.FlowMod) error {
-
 	data, err := json.Marshal(flowMod)
 	if err != nil {
 		log.Println("FlowAdd marshal error:", err)
 		return err
 	}
-	log.Println(string(data))
-	url := "http://127.0.0.1:8094/sendflowmod"
-	resp, err := http.Post(url, "application/json", bytes.NewReader(data))
+
+	conn, err := grpc.Dial("localhost:8094", grpc.WithInsecure())
 	if err != nil {
-		log.Println("Forward FlowAdd error:", err)
+		log.Printf("Failed to connect to Connection Manager: %v", err)
 		return err
 	}
-	defer resp.Body.Close()
-	log.Printf(" Forwarded FlowAdd to %s, got status=%s\n", url, resp.Status)
+	defer conn.Close()
+
+	client := cmpb.NewConnectionManagerClient(conn)
+	req := &cmpb.FlowModRequest{
+		Data: data,
+	}
+
+	resp, err := client.SendFlowMod(context.Background(), req)
+	if err != nil {
+		log.Printf("Error sending FlowMod: %v", err)
+		return err
+	}
+
+	if !resp.Success {
+		log.Printf("FlowMod failed: %s", resp.Message)
+		return fmt.Errorf(resp.Message)
+	}
+
+	log.Printf("FlowMod sent successfully")
 	return nil
 }

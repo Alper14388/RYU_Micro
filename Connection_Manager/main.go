@@ -1,7 +1,9 @@
 package main
 
 import (
+	pb "Connection_Manager/proto"
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -12,38 +14,117 @@ import (
 	"sync"
 	"time"
 
-	// Netrack OpenFlow kütüphanesi
 	"github.com/netrack/openflow/ofp"
+	"google.golang.org/grpc"
 )
 
-// ==============================
-// 1) Store yapısı
-// ==============================
+type server struct {
+	pb.UnimplementedConnectionManagerServer
+	store *Store
+}
+
 type Store struct {
 	mu   sync.Mutex
-	conn net.Conn // Tek Switch bağlantısı
+	conn net.Conn
 }
 
 var store = &Store{}
 
-// ==============================
-// 2) MAIN
-// ==============================
+func (s *server) SendFlowMod(ctx context.Context, req *pb.FlowModRequest) (*pb.FlowModResponse, error) {
+	var flowMod ofp.FlowMod
+	if err := json.Unmarshal(req.Data, &flowMod); err != nil {
+		return &pb.FlowModResponse{
+			Success: false,
+			Message: fmt.Sprintf("Invalid FlowMod data: %v", err),
+		}, nil
+	}
+
+	s.store.mu.Lock()
+	c := s.store.conn
+	s.store.mu.Unlock()
+
+	if c == nil {
+		return &pb.FlowModResponse{
+			Success: false,
+			Message: "No switch connection available",
+		}, nil
+	}
+
+	if _, err := flowMod.WriteTo(c); err != nil {
+		return &pb.FlowModResponse{
+			Success: false,
+			Message: fmt.Sprintf("Error sending FlowMod: %v", err),
+		}, nil
+	}
+
+	return &pb.FlowModResponse{
+		Success: true,
+		Message: "FlowMod sent successfully",
+	}, nil
+}
+
+func (s *server) SendPacketOut(ctx context.Context, req *pb.PacketOutRequest) (*pb.PacketOutResponse, error) {
+	var pktOut ofp.PacketOut
+	if err := json.Unmarshal(req.Data, &pktOut); err != nil {
+		return &pb.PacketOutResponse{
+			Success: false,
+			Message: fmt.Sprintf("Invalid PacketOut data: %v", err),
+		}, nil
+	}
+
+	s.store.mu.Lock()
+	c := s.store.conn
+	s.store.mu.Unlock()
+
+	if c == nil {
+		return &pb.PacketOutResponse{
+			Success: false,
+			Message: "No switch connection available",
+		}, nil
+	}
+
+	if _, err := pktOut.WriteTo(c); err != nil {
+		return &pb.PacketOutResponse{
+			Success: false,
+			Message: fmt.Sprintf("Error sending PacketOut: %v", err),
+		}, nil
+	}
+
+	return &pb.PacketOutResponse{
+		Success: true,
+		Message: "PacketOut sent successfully",
+	}, nil
+}
+
+func (s *server) HandlePacketIn(ctx context.Context, req *pb.PacketInRequest) (*pb.PacketInResponse, error) {
+	// This will be called by Ryu_go service
+	return &pb.PacketInResponse{
+		Success: true,
+		Message: "PacketIn handled",
+	}, nil
+}
+
 func main() {
-	// 2.1) OpenFlow bağlantısını dinleyecek
+	// Start OpenFlow listener
 	go listenAndServeOpenFlow(":6633")
 
-	http.HandleFunc("/sendflowmod", handleSendFlowMod)
-	http.HandleFunc("/sendpacketout", handleSendPacketOut)
+	// Start gRPC server
+	lis, err := net.Listen("tcp", ":8094")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
 
-	log.Println("[CM] Listening on :8094 for FlowMod/PacketOut requests...")
-	if err := http.ListenAndServe(":8094", nil); err != nil {
-		log.Fatalf("Error starting HTTP server: %v", err)
+	s := grpc.NewServer()
+	pb.RegisterConnectionManagerServer(s, &server{store: store})
+
+	log.Printf("gRPC server listening at %v", lis.Addr())
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
 	}
 }
 
 // ==============================
-// 3) OpenFlow Dinleme & Handshake
+// 1) Store yapısı
 // ==============================
 func listenAndServeOpenFlow(addr string) {
 	ln, err := net.Listen("tcp", addr)
@@ -214,68 +295,4 @@ func forwardPacketIn(pktIn ofp.PacketIn) {
 	}
 	defer resp.Body.Close()
 	log.Printf("[CM] Forwarded PacketIn to %s, got status=%s\n", url, resp.Status)
-}
-
-// ==============================
-// 4) FlowMod / PacketOut HTTP Handler
-// ==============================
-
-// 4.1) handleSendFlowMod
-func handleSendFlowMod(w http.ResponseWriter, r *http.Request) {
-	// JSON -> ofp.FlowMod
-	log.Println("[CM] Received SendFlowMod")
-	var flowMod ofp.FlowMod
-	if err := json.NewDecoder(r.Body).Decode(&flowMod); err != nil {
-		log.Println("error decoding SendFlowMod:", err)
-		http.Error(w, "Invalid FlowMod JSON", http.StatusBadRequest)
-		return
-	}
-	log.Printf("[CM] Received FlowMod from microservice: %+v\n", flowMod)
-
-	// store.conn ile göndereceğiz
-	store.mu.Lock()
-	c := store.conn
-	store.mu.Unlock()
-
-	if c == nil {
-		http.Error(w, "No switch connection yet!", http.StatusServiceUnavailable)
-		return
-	}
-
-	// flowMod.WriteTo(net.Conn)
-	_, err := flowMod.WriteTo(c)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error sending FlowMod: %v", err), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	log.Println("[CM] FlowMod sent to switch successfully.")
-}
-
-// 4.2) handleSendPacketOut
-func handleSendPacketOut(w http.ResponseWriter, r *http.Request) {
-	// JSON -> ofp.PacketOut
-	var pktOut ofp.PacketOut
-	if err := json.NewDecoder(r.Body).Decode(&pktOut); err != nil {
-		http.Error(w, "Invalid PacketOut JSON", http.StatusBadRequest)
-		return
-	}
-	log.Printf("[CM] Received PacketOut from microservice: %+v\n", pktOut)
-
-	store.mu.Lock()
-	c := store.conn
-	store.mu.Unlock()
-
-	if c == nil {
-		http.Error(w, "No switch connection yet!", http.StatusServiceUnavailable)
-		return
-	}
-
-	_, err := pktOut.WriteTo(c)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error sending PacketOut: %v", err), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	log.Println("[CM] PacketOut sent to switch successfully.")
 }

@@ -1,55 +1,52 @@
 package packetout
 
 import (
-	"bytes"
+	cmpb "Connection_Manager/proto"
+	pb "FlowOperation/proto"
+	"context"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/netrack/openflow/ofp"
+	"fmt"
 	"log"
-	"net/http"
+
+	"github.com/netrack/openflow/ofp"
+	"google.golang.org/grpc"
 )
 
-type PacketOutRequest struct {
-	SwitchID uint64 `json:"switch_id"`
-	InPort   uint32 `json:"in_port"`
-	OutPort  uint32 `json:"out_port"`
-	Data     string `json:"data"` // Base64 encoded
-	BufferID uint32 `json:"buffer_id"`
-}
-
-func PacketOut(w http.ResponseWriter, r *http.Request) {
+func PacketOutGRPC(req *pb.PacketOutRequest) (*pb.PacketOutResponse, error) {
 	log.Println("PacketOut Endpoint Hit")
-	var request PacketOutRequest
-
-	// Decode incoming JSON request
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid packet-out request format", http.StatusBadRequest)
-		log.Println("Error decoding request body:", err)
-		return
-	}
 
 	// Decode base64 data
-	data, err := base64.StdEncoding.DecodeString(request.Data)
+	data, err := base64.StdEncoding.DecodeString(req.Data)
 	if err != nil {
-		http.Error(w, "Invalid data format in request (not base64)", http.StatusBadRequest)
 		log.Println("Error decoding base64 data:", err)
-		return
+		return &pb.PacketOutResponse{
+			Success: false,
+			Message: "Invalid data format in request (not base64)",
+		}, err
 	}
 
 	// Create PacketOut message
-	packetOut := newPacket(request, data)
+	packetOut := newPacketFromGRPC(req, data)
 
 	if err := sendPacketToSwitch(&packetOut); err != nil {
-		log.Println("Error sending flow add to switch:", err)
+		log.Println("Error sending packet out to switch:", err)
+		return &pb.PacketOutResponse{
+			Success: false,
+			Message: err.Error(),
+		}, err
 	}
 
-	w.WriteHeader(http.StatusOK)
-	log.Println("Packet sent out successfully:", request)
+	log.Println("Packet sent out successfully:", req)
+	return &pb.PacketOutResponse{
+		Success: true,
+		Message: "Packet sent successfully",
+	}, nil
 }
 
-func newPacket(request PacketOutRequest, data []byte) ofp.PacketOut {
+func newPacketFromGRPC(request *pb.PacketOutRequest, data []byte) ofp.PacketOut {
 	packetOut := ofp.PacketOut{
-		Buffer: request.BufferID,
+		Buffer: request.BufferId,
 		InPort: ofp.PortNo(request.InPort),
 		Actions: []ofp.Action{
 			&ofp.ActionOutput{
@@ -61,20 +58,36 @@ func newPacket(request PacketOutRequest, data []byte) ofp.PacketOut {
 	return packetOut
 }
 
-func sendPacketToSwitch(flowMod *ofp.PacketOut) error {
+func sendPacketToSwitch(packetOut *ofp.PacketOut) error {
+	data, err := json.Marshal(packetOut)
+	if err != nil {
+		log.Println("PacketOut marshal error:", err)
+		return err
+	}
 
-	data, err := json.Marshal(flowMod)
+	conn, err := grpc.Dial("localhost:8094", grpc.WithInsecure())
 	if err != nil {
-		log.Println("Packetout marshal error:", err)
+		log.Printf("Failed to connect to Connection Manager: %v", err)
 		return err
 	}
-	url := "http://127.0.0.1:8094/sendpacketout"
-	resp, err := http.Post(url, "application/json", bytes.NewReader(data))
+	defer conn.Close()
+
+	client := cmpb.NewConnectionManagerClient(conn)
+	req := &cmpb.PacketOutRequest{
+		Data: data,
+	}
+
+	resp, err := client.SendPacketOut(context.Background(), req)
 	if err != nil {
-		log.Println("Forward Packetout error:", err)
+		log.Printf("Error sending PacketOut: %v", err)
 		return err
 	}
-	defer resp.Body.Close()
-	log.Printf(" Forwarded packetout to %s, got status=%s\n", url, resp.Status)
+
+	if !resp.Success {
+		log.Printf("PacketOut failed: %s", resp.Message)
+		return fmt.Errorf(resp.Message)
+	}
+
+	log.Printf("PacketOut sent successfully")
 	return nil
 }
