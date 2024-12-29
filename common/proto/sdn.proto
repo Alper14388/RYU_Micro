@@ -47,6 +47,7 @@ message FlowModRequest {
   uint32 command = 2;      // Yeni eklendi: FlowAdd, FlowModify, FlowDelete vs.
   uint32 flags = 3;        // Yeni eklendi
   uint32 table_id = 4;     // Yeni eklendi
+  repeated Instruction instructions = 5;
 }
 
 message FlowModResponse {

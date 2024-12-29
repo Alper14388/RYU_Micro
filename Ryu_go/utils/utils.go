@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"encoding/base64"
 	"fmt"
 	"log"
 	pb "sdn/common/proto"
@@ -31,17 +30,12 @@ const (
 
 // ExtractDataFromPacketIn extracts relevant data from the PacketInRequest.
 func ExtractDataFromPacketIn(req *pb.PacketInRequest) (PacketData, error) {
-	decodedData, err := base64.StdEncoding.DecodeString(string(req.Data))
-	if err != nil {
-		return PacketData{}, fmt.Errorf("failed to decode base64 data: %w", err)
-	}
-
-	frame := ParseEthernetFrame(decodedData)
+	frame := ParseEthernetFrame(req.Data)
 
 	packetInfo := PacketData{
 		BufferID:    req.BufferId,
 		EncodedData: string(req.Data),
-		Data:        decodedData,
+		Data:        req.Data,
 		DPID:        req.SwitchId,
 		IsLLDP:      frame.Ethertype == EthTypeLLDP,
 		InPort:      req.InPort,

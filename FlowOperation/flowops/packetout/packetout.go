@@ -2,7 +2,6 @@ package packetout
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	pb "sdn/common/proto"
@@ -47,10 +46,14 @@ func newPacketFromGRPC(request *pb.PacketOutRequest, data []byte) ofp.PacketOut 
 }
 
 func sendPacketToSwitch(packetOut *ofp.PacketOut) error {
-	data, err := json.Marshal(packetOut)
-	if err != nil {
-		log.Println("PacketOut marshal error:", err)
-		return err
+
+	var actions []*pb.Action
+	for _, action := range packetOut.Actions {
+		protoAction, err := ofpActionToProto(action)
+		if err != nil {
+			return err
+		}
+		actions = append(actions, protoAction)
 	}
 
 	conn, err := grpc.Dial("localhost:8094", grpc.WithInsecure())
@@ -59,10 +62,13 @@ func sendPacketToSwitch(packetOut *ofp.PacketOut) error {
 		return err
 	}
 	defer conn.Close()
-
+	log.Printf("Sending packet out to switch: %v", string(packetOut.Data))
 	client := pb.NewConnectionManagerClient(conn)
 	req := &pb.PacketOutRequest{
-		Data: data,
+		Data:     packetOut.Data,
+		InPort:   uint32(packetOut.InPort),
+		Actions:  actions,
+		BufferId: packetOut.Buffer,
 	}
 
 	resp, err := client.SendPacketOut(context.Background(), req)
@@ -78,4 +84,17 @@ func sendPacketToSwitch(packetOut *ofp.PacketOut) error {
 
 	log.Printf("PacketOut sent successfully")
 	return nil
+}
+
+func ofpActionToProto(action ofp.Action) (*pb.Action, error) {
+	switch act := action.(type) {
+	case *ofp.ActionOutput:
+		return &pb.Action{
+			Type:   uint32(ofp.ActionTypeOutput),
+			Port:   uint32(act.Port),
+			MaxLen: uint32(act.MaxLen),
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported action type: %v", action.Type())
+	}
 }

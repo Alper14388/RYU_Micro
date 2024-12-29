@@ -2,7 +2,6 @@ package ryu_go
 
 import (
 	"context"
-	"encoding/base64"
 	"log"
 	"sync"
 
@@ -109,13 +108,6 @@ func addFlowEntry(packet utils.PacketData, outPort uint32) error {
 func sendPacketOut(packet utils.PacketData, outPort uint32) error {
 	log.Printf("Sending packet out for packet: %+v\n", packet)
 
-	// Decode the Base64-encoded data
-	decodedData, err := base64.StdEncoding.DecodeString(packet.EncodedData)
-	if err != nil {
-		log.Printf("Failed to decode packet data: %v", err)
-		return err
-	}
-
 	conn, err := grpc.Dial(FlowOpAddr, grpc.WithInsecure())
 	if err != nil {
 		return err
@@ -127,7 +119,7 @@ func sendPacketOut(packet utils.PacketData, outPort uint32) error {
 		SwitchId: packet.DPID,
 		InPort:   packet.InPort,
 		OutPort:  outPort,
-		Data:     decodedData, // Use the decoded data
+		Data:     packet.Data, // Use the decoded data
 		BufferId: packet.BufferID,
 	}
 

@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.1
 // 	protoc        v3.12.4
-// source: common/proto/sdn.proto
+// source: proto/sdn.proto
 
 package proto
 
@@ -42,7 +42,7 @@ type FlowAddRequest struct {
 
 func (x *FlowAddRequest) Reset() {
 	*x = FlowAddRequest{}
-	mi := &file_common_proto_sdn_proto_msgTypes[0]
+	mi := &file_proto_sdn_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -54,7 +54,7 @@ func (x *FlowAddRequest) String() string {
 func (*FlowAddRequest) ProtoMessage() {}
 
 func (x *FlowAddRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_sdn_proto_msgTypes[0]
+	mi := &file_proto_sdn_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -67,7 +67,7 @@ func (x *FlowAddRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FlowAddRequest.ProtoReflect.Descriptor instead.
 func (*FlowAddRequest) Descriptor() ([]byte, []int) {
-	return file_common_proto_sdn_proto_rawDescGZIP(), []int{0}
+	return file_proto_sdn_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *FlowAddRequest) GetSwitchId() uint64 {
@@ -171,7 +171,7 @@ type FlowAddResponse struct {
 
 func (x *FlowAddResponse) Reset() {
 	*x = FlowAddResponse{}
-	mi := &file_common_proto_sdn_proto_msgTypes[1]
+	mi := &file_proto_sdn_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -183,7 +183,7 @@ func (x *FlowAddResponse) String() string {
 func (*FlowAddResponse) ProtoMessage() {}
 
 func (x *FlowAddResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_sdn_proto_msgTypes[1]
+	mi := &file_proto_sdn_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -196,7 +196,7 @@ func (x *FlowAddResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FlowAddResponse.ProtoReflect.Descriptor instead.
 func (*FlowAddResponse) Descriptor() ([]byte, []int) {
-	return file_common_proto_sdn_proto_rawDescGZIP(), []int{1}
+	return file_proto_sdn_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *FlowAddResponse) GetSuccess() bool {
@@ -220,13 +220,14 @@ type FlowModRequest struct {
 	Command       uint32                 `protobuf:"varint,2,opt,name=command,proto3" json:"command,omitempty"`                // Yeni eklendi: FlowAdd, FlowModify, FlowDelete vs.
 	Flags         uint32                 `protobuf:"varint,3,opt,name=flags,proto3" json:"flags,omitempty"`                    // Yeni eklendi
 	TableId       uint32                 `protobuf:"varint,4,opt,name=table_id,json=tableId,proto3" json:"table_id,omitempty"` // Yeni eklendi
+	Instructions  []*Instruction         `protobuf:"bytes,5,rep,name=instructions,proto3" json:"instructions,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FlowModRequest) Reset() {
 	*x = FlowModRequest{}
-	mi := &file_common_proto_sdn_proto_msgTypes[2]
+	mi := &file_proto_sdn_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -238,7 +239,7 @@ func (x *FlowModRequest) String() string {
 func (*FlowModRequest) ProtoMessage() {}
 
 func (x *FlowModRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_sdn_proto_msgTypes[2]
+	mi := &file_proto_sdn_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -251,7 +252,7 @@ func (x *FlowModRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FlowModRequest.ProtoReflect.Descriptor instead.
 func (*FlowModRequest) Descriptor() ([]byte, []int) {
-	return file_common_proto_sdn_proto_rawDescGZIP(), []int{2}
+	return file_proto_sdn_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *FlowModRequest) GetData() []byte {
@@ -282,6 +283,13 @@ func (x *FlowModRequest) GetTableId() uint32 {
 	return 0
 }
 
+func (x *FlowModRequest) GetInstructions() []*Instruction {
+	if x != nil {
+		return x.Instructions
+	}
+	return nil
+}
+
 type FlowModResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
@@ -293,7 +301,7 @@ type FlowModResponse struct {
 
 func (x *FlowModResponse) Reset() {
 	*x = FlowModResponse{}
-	mi := &file_common_proto_sdn_proto_msgTypes[3]
+	mi := &file_proto_sdn_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -305,7 +313,7 @@ func (x *FlowModResponse) String() string {
 func (*FlowModResponse) ProtoMessage() {}
 
 func (x *FlowModResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_sdn_proto_msgTypes[3]
+	mi := &file_proto_sdn_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -318,7 +326,7 @@ func (x *FlowModResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FlowModResponse.ProtoReflect.Descriptor instead.
 func (*FlowModResponse) Descriptor() ([]byte, []int) {
-	return file_common_proto_sdn_proto_rawDescGZIP(), []int{3}
+	return file_proto_sdn_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *FlowModResponse) GetSuccess() bool {
@@ -355,7 +363,7 @@ type MatchField struct {
 
 func (x *MatchField) Reset() {
 	*x = MatchField{}
-	mi := &file_common_proto_sdn_proto_msgTypes[4]
+	mi := &file_proto_sdn_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -367,7 +375,7 @@ func (x *MatchField) String() string {
 func (*MatchField) ProtoMessage() {}
 
 func (x *MatchField) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_sdn_proto_msgTypes[4]
+	mi := &file_proto_sdn_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -380,7 +388,7 @@ func (x *MatchField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchField.ProtoReflect.Descriptor instead.
 func (*MatchField) Descriptor() ([]byte, []int) {
-	return file_common_proto_sdn_proto_rawDescGZIP(), []int{4}
+	return file_proto_sdn_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *MatchField) GetClass() uint32 {
@@ -424,7 +432,7 @@ type Action struct {
 
 func (x *Action) Reset() {
 	*x = Action{}
-	mi := &file_common_proto_sdn_proto_msgTypes[5]
+	mi := &file_proto_sdn_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -436,7 +444,7 @@ func (x *Action) String() string {
 func (*Action) ProtoMessage() {}
 
 func (x *Action) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_sdn_proto_msgTypes[5]
+	mi := &file_proto_sdn_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -449,7 +457,7 @@ func (x *Action) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Action.ProtoReflect.Descriptor instead.
 func (*Action) Descriptor() ([]byte, []int) {
-	return file_common_proto_sdn_proto_rawDescGZIP(), []int{5}
+	return file_proto_sdn_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Action) GetType() uint32 {
@@ -492,7 +500,7 @@ type Instruction struct {
 
 func (x *Instruction) Reset() {
 	*x = Instruction{}
-	mi := &file_common_proto_sdn_proto_msgTypes[6]
+	mi := &file_proto_sdn_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -504,7 +512,7 @@ func (x *Instruction) String() string {
 func (*Instruction) ProtoMessage() {}
 
 func (x *Instruction) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_sdn_proto_msgTypes[6]
+	mi := &file_proto_sdn_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -517,7 +525,7 @@ func (x *Instruction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Instruction.ProtoReflect.Descriptor instead.
 func (*Instruction) Descriptor() ([]byte, []int) {
-	return file_common_proto_sdn_proto_rawDescGZIP(), []int{6}
+	return file_proto_sdn_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Instruction) GetType() uint32 {
@@ -556,7 +564,7 @@ type PacketOutRequest struct {
 
 func (x *PacketOutRequest) Reset() {
 	*x = PacketOutRequest{}
-	mi := &file_common_proto_sdn_proto_msgTypes[7]
+	mi := &file_proto_sdn_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -568,7 +576,7 @@ func (x *PacketOutRequest) String() string {
 func (*PacketOutRequest) ProtoMessage() {}
 
 func (x *PacketOutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_sdn_proto_msgTypes[7]
+	mi := &file_proto_sdn_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -581,7 +589,7 @@ func (x *PacketOutRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PacketOutRequest.ProtoReflect.Descriptor instead.
 func (*PacketOutRequest) Descriptor() ([]byte, []int) {
-	return file_common_proto_sdn_proto_rawDescGZIP(), []int{7}
+	return file_proto_sdn_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PacketOutRequest) GetSwitchId() uint64 {
@@ -637,7 +645,7 @@ type PacketOutResponse struct {
 
 func (x *PacketOutResponse) Reset() {
 	*x = PacketOutResponse{}
-	mi := &file_common_proto_sdn_proto_msgTypes[8]
+	mi := &file_proto_sdn_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -649,7 +657,7 @@ func (x *PacketOutResponse) String() string {
 func (*PacketOutResponse) ProtoMessage() {}
 
 func (x *PacketOutResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_sdn_proto_msgTypes[8]
+	mi := &file_proto_sdn_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -662,7 +670,7 @@ func (x *PacketOutResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PacketOutResponse.ProtoReflect.Descriptor instead.
 func (*PacketOutResponse) Descriptor() ([]byte, []int) {
-	return file_common_proto_sdn_proto_rawDescGZIP(), []int{8}
+	return file_proto_sdn_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *PacketOutResponse) GetSuccess() bool {
@@ -705,7 +713,7 @@ type PacketInRequest struct {
 
 func (x *PacketInRequest) Reset() {
 	*x = PacketInRequest{}
-	mi := &file_common_proto_sdn_proto_msgTypes[9]
+	mi := &file_proto_sdn_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -717,7 +725,7 @@ func (x *PacketInRequest) String() string {
 func (*PacketInRequest) ProtoMessage() {}
 
 func (x *PacketInRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_sdn_proto_msgTypes[9]
+	mi := &file_proto_sdn_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -730,7 +738,7 @@ func (x *PacketInRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PacketInRequest.ProtoReflect.Descriptor instead.
 func (*PacketInRequest) Descriptor() ([]byte, []int) {
-	return file_common_proto_sdn_proto_rawDescGZIP(), []int{9}
+	return file_proto_sdn_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *PacketInRequest) GetSwitchId() uint64 {
@@ -821,7 +829,7 @@ type PacketInResponse struct {
 
 func (x *PacketInResponse) Reset() {
 	*x = PacketInResponse{}
-	mi := &file_common_proto_sdn_proto_msgTypes[10]
+	mi := &file_proto_sdn_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -833,7 +841,7 @@ func (x *PacketInResponse) String() string {
 func (*PacketInResponse) ProtoMessage() {}
 
 func (x *PacketInResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_sdn_proto_msgTypes[10]
+	mi := &file_proto_sdn_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -846,7 +854,7 @@ func (x *PacketInResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PacketInResponse.ProtoReflect.Descriptor instead.
 func (*PacketInResponse) Descriptor() ([]byte, []int) {
-	return file_common_proto_sdn_proto_rawDescGZIP(), []int{10}
+	return file_proto_sdn_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *PacketInResponse) GetSuccess() bool {
@@ -870,46 +878,49 @@ func (x *PacketInResponse) GetErrorCode() uint32 {
 	return 0
 }
 
-var File_common_proto_sdn_proto protoreflect.FileDescriptor
+var File_proto_sdn_proto protoreflect.FileDescriptor
 
-var file_common_proto_sdn_proto_rawDesc = []byte{
-	0x0a, 0x16, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x73,
-	0x64, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x03, 0x73, 0x64, 0x6e, 0x22, 0xee, 0x02,
-	0x0a, 0x0e, 0x46, 0x6c, 0x6f, 0x77, 0x41, 0x64, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x12, 0x1b, 0x0a, 0x09, 0x73, 0x77, 0x69, 0x74, 0x63, 0x68, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x04, 0x52, 0x08, 0x73, 0x77, 0x69, 0x74, 0x63, 0x68, 0x49, 0x64, 0x12, 0x17, 0x0a,
-	0x07, 0x69, 0x6e, 0x5f, 0x70, 0x6f, 0x72, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x06,
-	0x69, 0x6e, 0x50, 0x6f, 0x72, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x73, 0x72, 0x63, 0x18, 0x03, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x03, 0x73, 0x72, 0x63, 0x12, 0x10, 0x0a, 0x03, 0x64, 0x73, 0x74, 0x18,
-	0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x64, 0x73, 0x74, 0x12, 0x19, 0x0a, 0x08, 0x6f, 0x75,
-	0x74, 0x5f, 0x70, 0x6f, 0x72, 0x74, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x07, 0x6f, 0x75,
-	0x74, 0x50, 0x6f, 0x72, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x72, 0x69, 0x6f, 0x72, 0x69, 0x74,
-	0x79, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x08, 0x70, 0x72, 0x69, 0x6f, 0x72, 0x69, 0x74,
-	0x79, 0x12, 0x21, 0x0a, 0x0c, 0x68, 0x61, 0x72, 0x64, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x6f, 0x75,
-	0x74, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x0b, 0x68, 0x61, 0x72, 0x64, 0x54, 0x69, 0x6d,
-	0x65, 0x6f, 0x75, 0x74, 0x12, 0x21, 0x0a, 0x0c, 0x69, 0x64, 0x6c, 0x65, 0x5f, 0x74, 0x69, 0x6d,
-	0x65, 0x6f, 0x75, 0x74, 0x18, 0x08, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x0b, 0x69, 0x64, 0x6c, 0x65,
-	0x54, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x12, 0x1b, 0x0a, 0x09, 0x62, 0x75, 0x66, 0x66, 0x65,
-	0x72, 0x5f, 0x69, 0x64, 0x18, 0x09, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x08, 0x62, 0x75, 0x66, 0x66,
-	0x65, 0x72, 0x49, 0x64, 0x12, 0x19, 0x0a, 0x08, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x5f, 0x69, 0x64,
-	0x18, 0x0a, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x07, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x49, 0x64, 0x12,
-	0x14, 0x0a, 0x05, 0x66, 0x6c, 0x61, 0x67, 0x73, 0x18, 0x0b, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x05,
-	0x66, 0x6c, 0x61, 0x67, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x63, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x18,
-	0x0c, 0x20, 0x01, 0x28, 0x04, 0x52, 0x06, 0x63, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x12, 0x1f, 0x0a,
-	0x0b, 0x63, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x5f, 0x6d, 0x61, 0x73, 0x6b, 0x18, 0x0d, 0x20, 0x01,
-	0x28, 0x04, 0x52, 0x0a, 0x63, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x4d, 0x61, 0x73, 0x6b, 0x22, 0x45,
-	0x0a, 0x0f, 0x46, 0x6c, 0x6f, 0x77, 0x41, 0x64, 0x64, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x08, 0x52, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x6d,
-	0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6d, 0x65,
-	0x73, 0x73, 0x61, 0x67, 0x65, 0x22, 0x6f, 0x0a, 0x0e, 0x46, 0x6c, 0x6f, 0x77, 0x4d, 0x6f, 0x64,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x18, 0x0a, 0x07, 0x63,
-	0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x07, 0x63, 0x6f,
-	0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x12, 0x14, 0x0a, 0x05, 0x66, 0x6c, 0x61, 0x67, 0x73, 0x18, 0x03,
-	0x20, 0x01, 0x28, 0x0d, 0x52, 0x05, 0x66, 0x6c, 0x61, 0x67, 0x73, 0x12, 0x19, 0x0a, 0x08, 0x74,
-	0x61, 0x62, 0x6c, 0x65, 0x5f, 0x69, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x07, 0x74,
-	0x61, 0x62, 0x6c, 0x65, 0x49, 0x64, 0x22, 0x64, 0x0a, 0x0f, 0x46, 0x6c, 0x6f, 0x77, 0x4d, 0x6f,
+var file_proto_sdn_proto_rawDesc = []byte{
+	0x0a, 0x0f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x73, 0x64, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x12, 0x03, 0x73, 0x64, 0x6e, 0x22, 0xee, 0x02, 0x0a, 0x0e, 0x46, 0x6c, 0x6f, 0x77, 0x41,
+	0x64, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1b, 0x0a, 0x09, 0x73, 0x77, 0x69,
+	0x74, 0x63, 0x68, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x08, 0x73, 0x77,
+	0x69, 0x74, 0x63, 0x68, 0x49, 0x64, 0x12, 0x17, 0x0a, 0x07, 0x69, 0x6e, 0x5f, 0x70, 0x6f, 0x72,
+	0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x06, 0x69, 0x6e, 0x50, 0x6f, 0x72, 0x74, 0x12,
+	0x10, 0x0a, 0x03, 0x73, 0x72, 0x63, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x73, 0x72,
+	0x63, 0x12, 0x10, 0x0a, 0x03, 0x64, 0x73, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03,
+	0x64, 0x73, 0x74, 0x12, 0x19, 0x0a, 0x08, 0x6f, 0x75, 0x74, 0x5f, 0x70, 0x6f, 0x72, 0x74, 0x18,
+	0x05, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x07, 0x6f, 0x75, 0x74, 0x50, 0x6f, 0x72, 0x74, 0x12, 0x1a,
+	0x0a, 0x08, 0x70, 0x72, 0x69, 0x6f, 0x72, 0x69, 0x74, 0x79, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0d,
+	0x52, 0x08, 0x70, 0x72, 0x69, 0x6f, 0x72, 0x69, 0x74, 0x79, 0x12, 0x21, 0x0a, 0x0c, 0x68, 0x61,
+	0x72, 0x64, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0d,
+	0x52, 0x0b, 0x68, 0x61, 0x72, 0x64, 0x54, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x12, 0x21, 0x0a,
+	0x0c, 0x69, 0x64, 0x6c, 0x65, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x18, 0x08, 0x20,
+	0x01, 0x28, 0x0d, 0x52, 0x0b, 0x69, 0x64, 0x6c, 0x65, 0x54, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74,
+	0x12, 0x1b, 0x0a, 0x09, 0x62, 0x75, 0x66, 0x66, 0x65, 0x72, 0x5f, 0x69, 0x64, 0x18, 0x09, 0x20,
+	0x01, 0x28, 0x0d, 0x52, 0x08, 0x62, 0x75, 0x66, 0x66, 0x65, 0x72, 0x49, 0x64, 0x12, 0x19, 0x0a,
+	0x08, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x5f, 0x69, 0x64, 0x18, 0x0a, 0x20, 0x01, 0x28, 0x0d, 0x52,
+	0x07, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x49, 0x64, 0x12, 0x14, 0x0a, 0x05, 0x66, 0x6c, 0x61, 0x67,
+	0x73, 0x18, 0x0b, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x05, 0x66, 0x6c, 0x61, 0x67, 0x73, 0x12, 0x16,
+	0x0a, 0x06, 0x63, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x18, 0x0c, 0x20, 0x01, 0x28, 0x04, 0x52, 0x06,
+	0x63, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x12, 0x1f, 0x0a, 0x0b, 0x63, 0x6f, 0x6f, 0x6b, 0x69, 0x65,
+	0x5f, 0x6d, 0x61, 0x73, 0x6b, 0x18, 0x0d, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0a, 0x63, 0x6f, 0x6f,
+	0x6b, 0x69, 0x65, 0x4d, 0x61, 0x73, 0x6b, 0x22, 0x45, 0x0a, 0x0f, 0x46, 0x6c, 0x6f, 0x77, 0x41,
+	0x64, 0x64, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x75,
+	0x63, 0x63, 0x65, 0x73, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x73, 0x75, 0x63,
+	0x63, 0x65, 0x73, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x22, 0xa5,
+	0x01, 0x0a, 0x0e, 0x46, 0x6c, 0x6f, 0x77, 0x4d, 0x6f, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52,
+	0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x07, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x12,
+	0x14, 0x0a, 0x05, 0x66, 0x6c, 0x61, 0x67, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x05,
+	0x66, 0x6c, 0x61, 0x67, 0x73, 0x12, 0x19, 0x0a, 0x08, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x5f, 0x69,
+	0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x07, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x49, 0x64,
+	0x12, 0x34, 0x0a, 0x0c, 0x69, 0x6e, 0x73, 0x74, 0x72, 0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73,
+	0x18, 0x05, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x10, 0x2e, 0x73, 0x64, 0x6e, 0x2e, 0x49, 0x6e, 0x73,
+	0x74, 0x72, 0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x0c, 0x69, 0x6e, 0x73, 0x74, 0x72, 0x75,
+	0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x22, 0x64, 0x0a, 0x0f, 0x46, 0x6c, 0x6f, 0x77, 0x4d, 0x6f,
 	0x64, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x75, 0x63,
 	0x63, 0x65, 0x73, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x73, 0x75, 0x63, 0x63,
 	0x65, 0x73, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x02,
@@ -1007,19 +1018,19 @@ var file_common_proto_sdn_proto_rawDesc = []byte{
 }
 
 var (
-	file_common_proto_sdn_proto_rawDescOnce sync.Once
-	file_common_proto_sdn_proto_rawDescData = file_common_proto_sdn_proto_rawDesc
+	file_proto_sdn_proto_rawDescOnce sync.Once
+	file_proto_sdn_proto_rawDescData = file_proto_sdn_proto_rawDesc
 )
 
-func file_common_proto_sdn_proto_rawDescGZIP() []byte {
-	file_common_proto_sdn_proto_rawDescOnce.Do(func() {
-		file_common_proto_sdn_proto_rawDescData = protoimpl.X.CompressGZIP(file_common_proto_sdn_proto_rawDescData)
+func file_proto_sdn_proto_rawDescGZIP() []byte {
+	file_proto_sdn_proto_rawDescOnce.Do(func() {
+		file_proto_sdn_proto_rawDescData = protoimpl.X.CompressGZIP(file_proto_sdn_proto_rawDescData)
 	})
-	return file_common_proto_sdn_proto_rawDescData
+	return file_proto_sdn_proto_rawDescData
 }
 
-var file_common_proto_sdn_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
-var file_common_proto_sdn_proto_goTypes = []any{
+var file_proto_sdn_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_proto_sdn_proto_goTypes = []any{
 	(*FlowAddRequest)(nil),    // 0: sdn.FlowAddRequest
 	(*FlowAddResponse)(nil),   // 1: sdn.FlowAddResponse
 	(*FlowModRequest)(nil),    // 2: sdn.FlowModRequest
@@ -1032,48 +1043,49 @@ var file_common_proto_sdn_proto_goTypes = []any{
 	(*PacketInRequest)(nil),   // 9: sdn.PacketInRequest
 	(*PacketInResponse)(nil),  // 10: sdn.PacketInResponse
 }
-var file_common_proto_sdn_proto_depIdxs = []int32{
-	5,  // 0: sdn.Instruction.actions:type_name -> sdn.Action
-	5,  // 1: sdn.PacketOutRequest.actions:type_name -> sdn.Action
-	4,  // 2: sdn.PacketInRequest.match_fields:type_name -> sdn.MatchField
-	2,  // 3: sdn.ConnectionManager.SendFlowMod:input_type -> sdn.FlowModRequest
-	7,  // 4: sdn.ConnectionManager.SendPacketOut:input_type -> sdn.PacketOutRequest
-	9,  // 5: sdn.PacketHandler.HandlePacketIn:input_type -> sdn.PacketInRequest
-	0,  // 6: sdn.FlowOperation.AddFlow:input_type -> sdn.FlowAddRequest
-	7,  // 7: sdn.FlowOperation.SendPacketOut:input_type -> sdn.PacketOutRequest
-	3,  // 8: sdn.ConnectionManager.SendFlowMod:output_type -> sdn.FlowModResponse
-	8,  // 9: sdn.ConnectionManager.SendPacketOut:output_type -> sdn.PacketOutResponse
-	10, // 10: sdn.PacketHandler.HandlePacketIn:output_type -> sdn.PacketInResponse
-	1,  // 11: sdn.FlowOperation.AddFlow:output_type -> sdn.FlowAddResponse
-	8,  // 12: sdn.FlowOperation.SendPacketOut:output_type -> sdn.PacketOutResponse
-	8,  // [8:13] is the sub-list for method output_type
-	3,  // [3:8] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+var file_proto_sdn_proto_depIdxs = []int32{
+	6,  // 0: sdn.FlowModRequest.instructions:type_name -> sdn.Instruction
+	5,  // 1: sdn.Instruction.actions:type_name -> sdn.Action
+	5,  // 2: sdn.PacketOutRequest.actions:type_name -> sdn.Action
+	4,  // 3: sdn.PacketInRequest.match_fields:type_name -> sdn.MatchField
+	2,  // 4: sdn.ConnectionManager.SendFlowMod:input_type -> sdn.FlowModRequest
+	7,  // 5: sdn.ConnectionManager.SendPacketOut:input_type -> sdn.PacketOutRequest
+	9,  // 6: sdn.PacketHandler.HandlePacketIn:input_type -> sdn.PacketInRequest
+	0,  // 7: sdn.FlowOperation.AddFlow:input_type -> sdn.FlowAddRequest
+	7,  // 8: sdn.FlowOperation.SendPacketOut:input_type -> sdn.PacketOutRequest
+	3,  // 9: sdn.ConnectionManager.SendFlowMod:output_type -> sdn.FlowModResponse
+	8,  // 10: sdn.ConnectionManager.SendPacketOut:output_type -> sdn.PacketOutResponse
+	10, // 11: sdn.PacketHandler.HandlePacketIn:output_type -> sdn.PacketInResponse
+	1,  // 12: sdn.FlowOperation.AddFlow:output_type -> sdn.FlowAddResponse
+	8,  // 13: sdn.FlowOperation.SendPacketOut:output_type -> sdn.PacketOutResponse
+	9,  // [9:14] is the sub-list for method output_type
+	4,  // [4:9] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
-func init() { file_common_proto_sdn_proto_init() }
-func file_common_proto_sdn_proto_init() {
-	if File_common_proto_sdn_proto != nil {
+func init() { file_proto_sdn_proto_init() }
+func file_proto_sdn_proto_init() {
+	if File_proto_sdn_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: file_common_proto_sdn_proto_rawDesc,
+			RawDescriptor: file_proto_sdn_proto_rawDesc,
 			NumEnums:      0,
 			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   3,
 		},
-		GoTypes:           file_common_proto_sdn_proto_goTypes,
-		DependencyIndexes: file_common_proto_sdn_proto_depIdxs,
-		MessageInfos:      file_common_proto_sdn_proto_msgTypes,
+		GoTypes:           file_proto_sdn_proto_goTypes,
+		DependencyIndexes: file_proto_sdn_proto_depIdxs,
+		MessageInfos:      file_proto_sdn_proto_msgTypes,
 	}.Build()
-	File_common_proto_sdn_proto = out.File
-	file_common_proto_sdn_proto_rawDesc = nil
-	file_common_proto_sdn_proto_goTypes = nil
-	file_common_proto_sdn_proto_depIdxs = nil
+	File_proto_sdn_proto = out.File
+	file_proto_sdn_proto_rawDesc = nil
+	file_proto_sdn_proto_goTypes = nil
+	file_proto_sdn_proto_depIdxs = nil
 }

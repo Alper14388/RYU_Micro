@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v3.12.4
-// source: common/proto/sdn.proto
+// source: proto/sdn.proto
 
 package proto
 
@@ -159,7 +159,7 @@ var ConnectionManager_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "common/proto/sdn.proto",
+	Metadata: "proto/sdn.proto",
 }
 
 const (
@@ -261,7 +261,7 @@ var PacketHandler_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "common/proto/sdn.proto",
+	Metadata: "proto/sdn.proto",
 }
 
 const (
@@ -405,5 +405,5 @@ var FlowOperation_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "common/proto/sdn.proto",
+	Metadata: "proto/sdn.proto",
 }

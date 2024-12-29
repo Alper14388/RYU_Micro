@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"net/http"
 	pb "sdn/common/proto"
 	"sync"
 	"time"
@@ -30,14 +29,65 @@ type Store struct {
 var store = &Store{}
 
 func (s *server) SendFlowMod(ctx context.Context, req *pb.FlowModRequest) (*pb.FlowModResponse, error) {
-	var flowMod ofp.FlowMod
-	if err := json.Unmarshal(req.Data, &flowMod); err != nil {
+	type tempFlowMod struct {
+		Buffer       uint32     `json:"Buffer"`
+		Command      uint32     `json:"Command"`
+		Match        ofp.Match  `json:"Match"`
+		IdleTimeout  uint16     `json:"IdleTimeout"`
+		HardTimeout  uint16     `json:"HardTimeout"`
+		Priority     uint16     `json:"Priority"`
+		Instructions []struct { // Ara yapı Instructions
+			Type    uint16      `json:"Type"`
+			Actions []pb.Action `json:"Actions"`
+		} `json:"Instructions"`
+	}
+
+	// Ara yapıya unmarshalling
+	var tempMod tempFlowMod
+	if err := json.Unmarshal(req.Data, &tempMod); err != nil {
 		return &pb.FlowModResponse{
 			Success: false,
 			Message: fmt.Sprintf("Invalid FlowMod data: %v", err),
 		}, nil
 	}
 
+	// Instructions'ı dönüştürme
+	var instructions ofp.Instructions
+	for _, inst := range tempMod.Instructions {
+		switch inst.Type {
+		case 4: // InstructionApplyActions
+			var actions ofp.Actions
+			for _, action := range inst.Actions {
+				ofpAction, err := protoActionToOfp(&action)
+				if err != nil {
+					return &pb.FlowModResponse{
+						Success: false,
+						Message: fmt.Sprintf("Invalid Action data: %v", err),
+					}, nil
+				}
+				actions = append(actions, ofpAction)
+			}
+			instructions = append(instructions, &ofp.InstructionApplyActions{
+				Actions: actions,
+			})
+		default:
+			return &pb.FlowModResponse{
+				Success: false,
+				Message: fmt.Sprintf("Unsupported instruction type: %v", inst.Type),
+			}, nil
+		}
+	}
+
+	// FlowMod nesnesi oluşturma
+	flowMod := ofp.FlowMod{
+		Buffer:       tempMod.Buffer,
+		Command:      ofp.FlowModCommand(tempMod.Command),
+		Match:        tempMod.Match,
+		IdleTimeout:  tempMod.IdleTimeout,
+		HardTimeout:  tempMod.HardTimeout,
+		Priority:     tempMod.Priority,
+		Instructions: instructions,
+	}
 	s.store.mu.Lock()
 	c := s.store.conn
 	s.store.mu.Unlock()
@@ -64,6 +114,14 @@ func (s *server) SendFlowMod(ctx context.Context, req *pb.FlowModRequest) (*pb.F
 
 func (s *server) SendPacketOut(ctx context.Context, req *pb.PacketOutRequest) (*pb.PacketOutResponse, error) {
 	var pktOut ofp.PacketOut
+	var actions ofp.Actions
+	for _, protoAction := range req.Actions {
+		ofpAction, err := protoActionToOfp(protoAction)
+		if err != nil {
+			return nil, err
+		}
+		actions = append(actions, ofpAction)
+	}
 	if err := json.Unmarshal(req.Data, &pktOut); err != nil {
 		return &pb.PacketOutResponse{
 			Success: false,
@@ -279,19 +337,49 @@ func readFromSwitch(conn net.Conn) {
 	}
 }
 
-// forwardPacketIn: PacketIn microservisine JSON post
 func forwardPacketIn(pktIn ofp.PacketIn) {
+	log.Printf("Forwarding PacketIn via gRPC: %+v", pktIn)
+
+	// Serialize PacketIn into JSON
 	data, err := json.Marshal(pktIn)
 	if err != nil {
 		log.Println("PacketIn marshal error:", err)
 		return
 	}
-	url := "http://127.0.0.1:8090/packetin"
-	resp, err := http.Post(url, "application/json", bytes.NewReader(data))
+
+	// Establish gRPC connection
+	conn, err := grpc.Dial("localhost:8090", grpc.WithInsecure())
 	if err != nil {
-		log.Println("Forward PacketIn error:", err)
+		log.Printf("Failed to connect to PacketHandler service: %v", err)
 		return
 	}
-	defer resp.Body.Close()
-	log.Printf("[CM] Forwarded PacketIn to %s, got status=%s\n", url, resp.Status)
+	defer conn.Close()
+
+	client := pb.NewPacketHandlerClient(conn)
+
+	// Create a PacketInRequest
+	req := &pb.PacketInRequest{
+		Data: data, // JSON serialized data
+	}
+
+	// Send gRPC request
+	resp, err := client.HandlePacketIn(context.Background(), req)
+	if err != nil {
+		log.Printf("Error sending PacketIn via gRPC: %v", err)
+		return
+	}
+
+	log.Printf("PacketIn successfully forwarded via gRPC: %+v", resp)
+}
+
+func protoActionToOfp(protoAction *pb.Action) (ofp.Action, error) {
+	switch protoAction.Type {
+	case uint32(ofp.ActionTypeOutput):
+		return &ofp.ActionOutput{
+			Port:   ofp.PortNo(protoAction.Port),
+			MaxLen: uint16(protoAction.MaxLen),
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported action type: %v", protoAction.Type)
+	}
 }
