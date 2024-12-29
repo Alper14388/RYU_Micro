@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	pb "sdn/common/proto"
 
 	"github.com/netrack/openflow/ofp"
@@ -12,7 +13,6 @@ import (
 )
 
 func AddFlowGRPC(req *pb.FlowAddRequest) (*pb.FlowAddResponse, error) {
-	log.Println("AddFlowGRPC called")
 	log.Println("New flow add request:", req)
 
 	match := newMatchFromGRPC(req)
@@ -43,11 +43,18 @@ func uint32ToXMValue(value uint32) ofp.XMValue {
 	return ofp.XMValue(buf)
 }
 
-func stringToXMValue(value string) ofp.XMValue {
-	return ofp.XMValue([]byte(value))
+func macStringTo6Byte(s string) [6]byte {
+	hw, err := net.ParseMAC(s) // "00:11:22:33:44:55"
+	if err != nil {
+		// handle error
+	}
+	var arr [6]byte
+	copy(arr[:], hw) // hw = net.HardwareAddr (slice)
+	return arr
 }
-
 func newMatchFromGRPC(request *pb.FlowAddRequest) ofp.Match {
+	sourceMac := macStringTo6Byte(request.Src)
+	destinationMac := macStringTo6Byte(request.Dst)
 	match := ofp.Match{
 		Type: ofp.MatchTypeXM,
 		Fields: []ofp.XM{
@@ -59,12 +66,12 @@ func newMatchFromGRPC(request *pb.FlowAddRequest) ofp.Match {
 			{
 				Class: ofp.XMClassOpenflowBasic,
 				Type:  ofp.XMTypeEthSrc,
-				Value: stringToXMValue(request.Src),
+				Value: ofp.XMValue(sourceMac[:]),
 			},
 			{
 				Class: ofp.XMClassOpenflowBasic,
 				Type:  ofp.XMTypeEthDst,
-				Value: stringToXMValue(request.Dst),
+				Value: ofp.XMValue(destinationMac[:]),
 			},
 		},
 	}
@@ -94,6 +101,7 @@ func newFlowModFromGRPC(request *pb.FlowAddRequest, match ofp.Match) *ofp.FlowMo
 }
 
 func sendFlowAddToSwitch(flowMod *ofp.FlowMod) error {
+
 	data, err := json.Marshal(flowMod)
 	if err != nil {
 		log.Println("FlowAdd marshal error:", err)
@@ -108,8 +116,14 @@ func sendFlowAddToSwitch(flowMod *ofp.FlowMod) error {
 	defer conn.Close()
 
 	client := pb.NewConnectionManagerClient(conn)
+	instructions := exportInstruction(flowMod)
+	log.Println("Instructions:", instructions)
 	req := &pb.FlowModRequest{
-		Data: data,
+		Command:      uint32(flowMod.Command),
+		Flags:        uint32(flowMod.Flags),
+		TableId:      uint32(flowMod.Table),
+		Data:         data,
+		Instructions: instructions,
 	}
 
 	resp, err := client.SendFlowMod(context.Background(), req)
@@ -125,4 +139,34 @@ func sendFlowAddToSwitch(flowMod *ofp.FlowMod) error {
 
 	log.Printf("FlowMod sent successfully")
 	return nil
+}
+
+func exportInstruction(flowMod *ofp.FlowMod) []*pb.Instruction {
+	var instructions []*pb.Instruction
+	for _, instr := range flowMod.Instructions {
+		switch inst := instr.(type) {
+		case *ofp.InstructionApplyActions:
+			// ApplyActions instruction türü
+			var actions []*pb.Action
+			for _, action := range inst.Actions {
+				switch act := action.(type) {
+				case *ofp.ActionOutput:
+					actions = append(actions, &pb.Action{
+						Type:   uint32(ofp.ActionTypeOutput),
+						Port:   uint32(act.Port),
+						MaxLen: uint32(act.MaxLen),
+					})
+				default:
+					log.Printf("Unsupported action type: %T", act)
+				}
+			}
+			instructions = append(instructions, &pb.Instruction{
+				Type:    uint32(ofp.InstructionTypeApplyActions),
+				Actions: actions,
+			})
+		default:
+			log.Printf("Unsupported instruction type: %T", instr)
+		}
+	}
+	return instructions
 }

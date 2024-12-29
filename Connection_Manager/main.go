@@ -29,48 +29,49 @@ type Store struct {
 var store = &Store{}
 
 func (s *server) SendFlowMod(ctx context.Context, req *pb.FlowModRequest) (*pb.FlowModResponse, error) {
-	type tempFlowMod struct {
-		Buffer       uint32     `json:"Buffer"`
-		Command      uint32     `json:"Command"`
-		Match        ofp.Match  `json:"Match"`
-		IdleTimeout  uint16     `json:"IdleTimeout"`
-		HardTimeout  uint16     `json:"HardTimeout"`
-		Priority     uint16     `json:"Priority"`
-		Instructions []struct { // Ara yapı Instructions
-			Type    uint16      `json:"Type"`
-			Actions []pb.Action `json:"Actions"`
-		} `json:"Instructions"`
+	var tempMod struct {
+		Buffer      uint32    `json:"Buffer"`
+		Command     uint32    `json:"Command"`
+		Match       ofp.Match `json:"Match"`
+		IdleTimeout uint16    `json:"IdleTimeout"`
+		HardTimeout uint16    `json:"HardTimeout"`
+		Priority    uint16    `json:"Priority"`
 	}
 
-	// Ara yapıya unmarshalling
-	var tempMod tempFlowMod
 	if err := json.Unmarshal(req.Data, &tempMod); err != nil {
+		log.Printf("Failed to unmarshal FlowMod data: %v", err)
 		return &pb.FlowModResponse{
 			Success: false,
 			Message: fmt.Sprintf("Invalid FlowMod data: %v", err),
 		}, nil
 	}
 
-	// Instructions'ı dönüştürme
+	// Instructions'ı `req.Instructions` üzerinden çözümleme
 	var instructions ofp.Instructions
-	for _, inst := range tempMod.Instructions {
+	for _, inst := range req.Instructions {
 		switch inst.Type {
-		case 4: // InstructionApplyActions
+		case uint32(ofp.InstructionTypeApplyActions): // ApplyActions
 			var actions ofp.Actions
 			for _, action := range inst.Actions {
-				ofpAction, err := protoActionToOfp(&action)
-				if err != nil {
+				switch action.Type {
+				case uint32(ofp.ActionTypeOutput): // ActionOutput
+					actions = append(actions, &ofp.ActionOutput{
+						Port:   ofp.PortNo(action.Port),
+						MaxLen: uint16(action.MaxLen),
+					})
+				default:
+					log.Printf("Unsupported action type: %v", action.Type)
 					return &pb.FlowModResponse{
 						Success: false,
-						Message: fmt.Sprintf("Invalid Action data: %v", err),
+						Message: fmt.Sprintf("Unsupported action type: %v", action.Type),
 					}, nil
 				}
-				actions = append(actions, ofpAction)
 			}
 			instructions = append(instructions, &ofp.InstructionApplyActions{
 				Actions: actions,
 			})
 		default:
+			log.Printf("Unsupported instruction type: %v", inst.Type)
 			return &pb.FlowModResponse{
 				Success: false,
 				Message: fmt.Sprintf("Unsupported instruction type: %v", inst.Type),
@@ -78,7 +79,6 @@ func (s *server) SendFlowMod(ctx context.Context, req *pb.FlowModRequest) (*pb.F
 		}
 	}
 
-	// FlowMod nesnesi oluşturma
 	flowMod := ofp.FlowMod{
 		Buffer:       tempMod.Buffer,
 		Command:      ofp.FlowModCommand(tempMod.Command),
@@ -88,18 +88,35 @@ func (s *server) SendFlowMod(ctx context.Context, req *pb.FlowModRequest) (*pb.F
 		Priority:     tempMod.Priority,
 		Instructions: instructions,
 	}
+
 	s.store.mu.Lock()
 	c := s.store.conn
 	s.store.mu.Unlock()
-
 	if c == nil {
 		return &pb.FlowModResponse{
 			Success: false,
 			Message: "No switch connection available",
 		}, nil
 	}
+	flowMod.Buffer = ofp.NoBuffer
+	header := make([]byte, 8)
+	header[0] = 4  // OpenFlow 1.3 versiyonu
+	header[1] = 14 // FlowMod mesaj tipi
+	size, _ := calculateFlowModSize(&flowMod)
+	binary.BigEndian.PutUint16(header[2:], uint16(8+size)) // Header + Body uzunluğu
+	binary.BigEndian.PutUint32(header[4:], uint32(12345))  // Xid örnek olarak 12345
 
-	if _, err := flowMod.WriteTo(c); err != nil {
+	// FlowMod'u serialize edin
+	var buf bytes.Buffer
+	if _, err := flowMod.WriteTo(&buf); err != nil {
+		return &pb.FlowModResponse{
+			Success: false,
+			Message: fmt.Sprintf("Error sending FlowMod: %v", err),
+		}, nil
+	}
+
+	// Header + Body yazın
+	if _, err := c.Write(append(header, buf.Bytes()...)); err != nil {
 		return &pb.FlowModResponse{
 			Success: false,
 			Message: fmt.Sprintf("Error sending FlowMod: %v", err),
@@ -130,10 +147,10 @@ func (s *server) SendPacketOut(ctx context.Context, req *pb.PacketOutRequest) (*
 	}
 
 	s.store.mu.Lock()
-	c := s.store.conn
+	//c := s.store.conn
 	s.store.mu.Unlock()
 
-	if c == nil {
+	/*if c == nil {
 		return &pb.PacketOutResponse{
 			Success: false,
 			Message: "No switch connection available",
@@ -145,7 +162,7 @@ func (s *server) SendPacketOut(ctx context.Context, req *pb.PacketOutRequest) (*
 			Success: false,
 			Message: fmt.Sprintf("Error sending PacketOut: %v", err),
 		}, nil
-	}
+	}*/
 
 	return &pb.PacketOutResponse{
 		Success: true,
@@ -359,7 +376,8 @@ func forwardPacketIn(pktIn ofp.PacketIn) {
 
 	// Create a PacketInRequest
 	req := &pb.PacketInRequest{
-		Data: data, // JSON serialized data
+		BufferId: pktIn.Buffer,
+		Data:     data, // JSON serialized data
 	}
 
 	// Send gRPC request
@@ -382,4 +400,12 @@ func protoActionToOfp(protoAction *pb.Action) (ofp.Action, error) {
 	default:
 		return nil, fmt.Errorf("unsupported action type: %v", protoAction.Type)
 	}
+}
+
+func calculateFlowModSize(flowMod *ofp.FlowMod) (int, error) {
+	var buf bytes.Buffer
+	if _, err := flowMod.WriteTo(&buf); err != nil {
+		return 0, err
+	}
+	return buf.Len(), nil
 }
