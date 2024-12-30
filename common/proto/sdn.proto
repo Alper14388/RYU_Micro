@@ -32,6 +32,8 @@ message FlowAddRequest {
   uint32 flags = 11;
   uint64 cookie = 12;
   uint64 cookie_mask = 13;
+  uint64 eth_type = 14;
+  uint64 IPProto = 15;
 }
 
 message FlowAddResponse {

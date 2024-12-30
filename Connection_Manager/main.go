@@ -291,13 +291,6 @@ func readFromSwitch(conn net.Conn) {
 func forwardPacketIn(pktIn ofp.PacketIn) {
 	log.Printf("Forwarding PacketIn via gRPC: %+v", pktIn)
 
-	// Serialize PacketIn into JSON
-	data, err := json.Marshal(pktIn)
-	if err != nil {
-		log.Println("PacketIn marshal error:", err)
-		return
-	}
-
 	conn, err := grpc.Dial("localhost:8090", grpc.WithInsecure())
 	if err != nil {
 		log.Printf("Failed to connect to PacketHandler service: %v", err)
@@ -309,7 +302,9 @@ func forwardPacketIn(pktIn ofp.PacketIn) {
 
 	req := &pb.PacketInRequest{
 		BufferId: pktIn.Buffer,
-		Data:     data,
+		Data:     pktIn.Data,
+		Cookie:   pktIn.Cookie,
+		TableId:  uint32(pktIn.Table),
 	}
 
 	resp, err := client.HandlePacketIn(context.Background(), req)

@@ -61,7 +61,7 @@ func HandlePacketIn(req *pb.PacketInRequest) (*pb.PacketInResponse, error) {
 			Message: "LLDP packet ignored",
 		}, nil
 	}
-
+	log.Println("packetInfo:", packetInfo)
 	updateMacToPort(packetInfo.DPID, packetInfo.Src, packetInfo.InPort)
 
 	outPort := outPortLookup(packetInfo.DPID, packetInfo.Dst)
@@ -76,7 +76,6 @@ func HandlePacketIn(req *pb.PacketInRequest) (*pb.PacketInResponse, error) {
 }
 
 func addFlowEntry(packet utils.PacketData, outPort uint32) error {
-	log.Printf("Adding flow entry for packet: %+v\n", packet)
 
 	conn, err := grpc.Dial(FlowOpAddr, grpc.WithInsecure())
 	if err != nil {
@@ -95,6 +94,8 @@ func addFlowEntry(packet utils.PacketData, outPort uint32) error {
 		HardTimeout: 30,
 		IdleTimeout: 30,
 		BufferId:    packet.BufferID,
+		EthType:     uint64(packet.EtherType),
+		IPProto:     uint64(packet.IPProto),
 	}
 
 	_, err = client.AddFlow(context.Background(), req)
