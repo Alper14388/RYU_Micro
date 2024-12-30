@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
+	"sdn/FlowOperation/flowops/flowadd/utils"
+
 	pb "sdn/common/proto"
 
 	"github.com/netrack/openflow/ofp"
@@ -33,36 +34,6 @@ func AddFlowGRPC(req *pb.FlowAddRequest) (*pb.FlowAddResponse, error) {
 	}, nil
 }
 
-func uint32ToXMValue(value uint32) ofp.XMValue {
-	buf := make([]byte, 4)
-	buf[0] = byte(value >> 24)
-	buf[1] = byte(value >> 16)
-	buf[2] = byte(value >> 8)
-	buf[3] = byte(value)
-	return ofp.XMValue(buf)
-}
-
-func uint16ToXMValue(value uint16) ofp.XMValue {
-	buf := make([]byte, 2)
-	buf[0] = byte(value >> 8)
-	buf[1] = byte(value)
-	return ofp.XMValue(buf)
-}
-func uint8ToXMValue(value uint8) ofp.XMValue {
-	buf := make([]byte, 1)
-	buf[0] = byte(value)
-	return ofp.XMValue(buf)
-}
-
-func macStringTo6Byte(s string) [6]byte {
-	hw, err := net.ParseMAC(s)
-	if err != nil {
-		log.Println("ERROR: parsing MAC:", err)
-	}
-	var arr [6]byte
-	copy(arr[:], hw)
-	return arr
-}
 func newMatchFromGRPC(request *pb.FlowAddRequest) ofp.Match {
 	var fields []ofp.XM
 	log.Println("request-eth-frame", request.EthType, request.IPProto)
@@ -70,7 +41,7 @@ func newMatchFromGRPC(request *pb.FlowAddRequest) ofp.Match {
 		fields = append(fields, ofp.XM{
 			Class: ofp.XMClassOpenflowBasic,
 			Type:  ofp.XMTypeEthType,
-			Value: uint16ToXMValue(0x0806),
+			Value: utils.Uint16ToXMValue(0x0806),
 		})
 	}
 
@@ -79,17 +50,17 @@ func newMatchFromGRPC(request *pb.FlowAddRequest) ofp.Match {
 			ofp.XM{
 				Class: ofp.XMClassOpenflowBasic,
 				Type:  ofp.XMTypeEthType,
-				Value: uint16ToXMValue(0x0800), // IPv4
+				Value: utils.Uint16ToXMValue(0x0800), // IPv4
 			},
 			ofp.XM{
 				Class: ofp.XMClassOpenflowBasic,
 				Type:  ofp.XMTypeIPProto,
-				Value: uint8ToXMValue(0x01), // ICMP
+				Value: utils.Uint8ToXMValue(0x01), // ICMP
 			})
 	}
 
 	if request.Src != "" {
-		sourceMac := macStringTo6Byte(request.Src)
+		sourceMac := utils.MacStringTo6Byte(request.Src)
 		fields = append(fields, ofp.XM{
 			Class: ofp.XMClassOpenflowBasic,
 			Type:  ofp.XMTypeEthSrc,
@@ -98,7 +69,7 @@ func newMatchFromGRPC(request *pb.FlowAddRequest) ofp.Match {
 	}
 
 	if request.Dst != "" {
-		destinationMac := macStringTo6Byte(request.Dst)
+		destinationMac := utils.MacStringTo6Byte(request.Dst)
 		fields = append(fields, ofp.XM{
 			Class: ofp.XMClassOpenflowBasic,
 			Type:  ofp.XMTypeEthDst,
@@ -110,7 +81,7 @@ func newMatchFromGRPC(request *pb.FlowAddRequest) ofp.Match {
 		fields = append(fields, ofp.XM{
 			Class: ofp.XMClassOpenflowBasic,
 			Type:  ofp.XMTypeInPort,
-			Value: uint32ToXMValue(request.InPort),
+			Value: utils.Uint32ToXMValue(request.InPort),
 		})
 	}
 

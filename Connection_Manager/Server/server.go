@@ -1,4 +1,4 @@
-package main
+package Server
 
 import (
 	"bytes"
@@ -11,14 +11,15 @@ import (
 	"io"
 	"log"
 	"net"
+	"sdn/Connection_Manager/utils"
 	pb "sdn/common/proto"
 	"sync"
 	"time"
 )
 
-type server struct {
+type Server struct {
 	pb.UnimplementedConnectionManagerServer
-	store *Store
+	Store *Store
 }
 
 type Store struct {
@@ -26,131 +27,17 @@ type Store struct {
 	conn net.Conn
 }
 
+var tempMod struct {
+	Buffer      uint32    `json:"Buffer"`
+	Command     uint32    `json:"Command"`
+	Match       ofp.Match `json:"Match"`
+	IdleTimeout uint16    `json:"IdleTimeout"`
+	HardTimeout uint16    `json:"HardTimeout"`
+	Priority    uint16    `json:"Priority"`
+}
 var store = &Store{}
 
-func (s *server) SendFlowMod(ctx context.Context, req *pb.FlowModRequest) (*pb.FlowModResponse, error) {
-	var tempMod struct {
-		Buffer      uint32    `json:"Buffer"`
-		Command     uint32    `json:"Command"`
-		Match       ofp.Match `json:"Match"`
-		IdleTimeout uint16    `json:"IdleTimeout"`
-		HardTimeout uint16    `json:"HardTimeout"`
-		Priority    uint16    `json:"Priority"`
-	}
-
-	if err := json.Unmarshal(req.Data, &tempMod); err != nil {
-		log.Printf("Failed to unmarshal FlowMod data: %v", err)
-		return &pb.FlowModResponse{
-			Success: false,
-			Message: fmt.Sprintf("Invalid FlowMod data: %v", err),
-		}, nil
-	}
-
-	var instructions ofp.Instructions
-	for _, inst := range req.Instructions {
-		switch inst.Type {
-		case uint32(ofp.InstructionTypeApplyActions): // ApplyActions
-			var actions ofp.Actions
-			for _, action := range inst.Actions {
-				switch action.Type {
-				case uint32(ofp.ActionTypeOutput): // ActionOutput
-					actions = append(actions, &ofp.ActionOutput{
-						Port:   ofp.PortNo(action.Port),
-						MaxLen: uint16(action.MaxLen),
-					})
-				default:
-					log.Printf("Unsupported action type: %v", action.Type)
-					return &pb.FlowModResponse{
-						Success: false,
-						Message: fmt.Sprintf("Unsupported action type: %v", action.Type),
-					}, nil
-				}
-			}
-			instructions = append(instructions, &ofp.InstructionApplyActions{
-				Actions: actions,
-			})
-		default:
-			log.Printf("Unsupported instruction type: %v", inst.Type)
-			return &pb.FlowModResponse{
-				Success: false,
-				Message: fmt.Sprintf("Unsupported instruction type: %v", inst.Type),
-			}, nil
-		}
-	}
-
-	flowMod := ofp.FlowMod{
-		Buffer:       tempMod.Buffer,
-		Command:      ofp.FlowModCommand(tempMod.Command),
-		Match:        tempMod.Match,
-		IdleTimeout:  tempMod.IdleTimeout,
-		HardTimeout:  tempMod.HardTimeout,
-		Priority:     tempMod.Priority,
-		Instructions: instructions,
-	}
-
-	s.store.mu.Lock()
-	c := s.store.conn
-	s.store.mu.Unlock()
-	if c == nil {
-		return &pb.FlowModResponse{
-			Success: false,
-			Message: "No switch connection available",
-		}, nil
-	}
-	flowMod.Buffer = ofp.NoBuffer
-	header := make([]byte, 8)
-	header[0] = 4
-	header[1] = 14
-	size, _ := calculateFlowModSize(&flowMod)
-	binary.BigEndian.PutUint16(header[2:], uint16(8+size)) // Header + Body uzunluğu
-	binary.BigEndian.PutUint32(header[4:], uint32(12345))  // Xid örnek olarak 12345
-
-	var buf bytes.Buffer
-	if _, err := flowMod.WriteTo(&buf); err != nil {
-		return &pb.FlowModResponse{
-			Success: false,
-			Message: fmt.Sprintf("Error sending FlowMod: %v", err),
-		}, nil
-	}
-
-	if _, err := c.Write(append(header, buf.Bytes()...)); err != nil {
-		return &pb.FlowModResponse{
-			Success: false,
-			Message: fmt.Sprintf("Error sending FlowMod: %v", err),
-		}, nil
-	}
-
-	return &pb.FlowModResponse{
-		Success: true,
-		Message: "FlowMod sent successfully",
-	}, nil
-}
-
-func (s *server) HandlePacketIn() (*pb.PacketInResponse, error) {
-	return &pb.PacketInResponse{
-		Success: true,
-		Message: "PacketIn handled",
-	}, nil
-}
-
-func main() {
-	go listenAndServeOpenFlow(":6633")
-
-	lis, err := net.Listen("tcp", ":8094")
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-
-	s := grpc.NewServer()
-	pb.RegisterConnectionManagerServer(s, &server{store: store})
-
-	log.Printf("gRPC server listening at %v", lis.Addr())
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
-}
-
-func listenAndServeOpenFlow(addr string) {
+func ListenAndServeOpenFlow(addr string) {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("Failed to listen on %s: %v", addr, err)
@@ -179,7 +66,6 @@ func handleSwitchConnection(conn net.Conn) {
 		return
 	}
 	log.Println("[CM] Handshake OK with switch", conn.RemoteAddr())
-
 	store.mu.Lock()
 	if store.conn != nil {
 		store.conn.Close()
@@ -316,10 +202,64 @@ func forwardPacketIn(pktIn ofp.PacketIn) {
 	log.Printf("PacketIn successfully forwarded via gRPC: %+v", resp)
 }
 
-func calculateFlowModSize(flowMod *ofp.FlowMod) (int, error) {
-	var buf bytes.Buffer
-	if _, err := flowMod.WriteTo(&buf); err != nil {
-		return 0, err
+func (s *Server) SendFlowMod(ctx context.Context, req *pb.FlowModRequest) (*pb.FlowModResponse, error) {
+
+	if err := json.Unmarshal(req.Data, &tempMod); err != nil {
+		log.Printf("Failed to unmarshal FlowMod data: %v", err)
+		return &pb.FlowModResponse{
+			Success: false,
+			Message: fmt.Sprintf("Invalid FlowMod data: %v", err),
+		}, nil
 	}
-	return buf.Len(), nil
+
+	instructions, err := utils.GetInstruction(req)
+	if err != nil {
+		log.Printf("Failed to get instructions: %v", err)
+		return &pb.FlowModResponse{
+			Success: false,
+			Message: "get instructions error",
+		}, err
+	}
+
+	flowMod := ofp.FlowMod{
+		Buffer:       tempMod.Buffer,
+		Command:      ofp.FlowModCommand(tempMod.Command),
+		Match:        tempMod.Match,
+		IdleTimeout:  tempMod.IdleTimeout,
+		HardTimeout:  tempMod.HardTimeout,
+		Priority:     tempMod.Priority,
+		Instructions: instructions,
+	}
+	flowMod.Buffer = ofp.NoBuffer
+	s.Store.mu.Lock()
+	c := s.Store.conn
+	s.Store.mu.Unlock()
+	if c == nil {
+		return &pb.FlowModResponse{
+			Success: false,
+			Message: "No switch connection available",
+		}, nil
+	}
+	if err := utils.SendHeaderandBuffer(c, flowMod); err != nil {
+		return &pb.FlowModResponse{
+			Success: false,
+			Message: "FlowMod sent failed",
+		}, err
+	}
+
+	return &pb.FlowModResponse{
+		Success: true,
+		Message: "FlowMod sent successfully",
+	}, nil
+}
+
+func (s *Server) HandlePacketIn() (*pb.PacketInResponse, error) {
+	return &pb.PacketInResponse{
+		Success: true,
+		Message: "PacketIn handled",
+	}, nil
+}
+
+func GetStore() *Store {
+	return store
 }
