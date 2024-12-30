@@ -79,7 +79,6 @@ func addBasicFlows(switchId uint64) error {
 			},
 		},
 	}
-	// Switch'e gönder
 	if err := sendFlowAddToSwitch(arpFlowMod); err != nil {
 		return fmt.Errorf("failed to add ARP flow: %w", err)
 	}
@@ -141,12 +140,12 @@ func uint8ToXMValue(value uint8) ofp.XMValue {
 }
 
 func macStringTo6Byte(s string) [6]byte {
-	hw, err := net.ParseMAC(s) // "00:11:22:33:44:55"
+	hw, err := net.ParseMAC(s)
 	if err != nil {
 		log.Println("ERROR: parsing MAC:", err)
 	}
 	var arr [6]byte
-	copy(arr[:], hw) // hw = net.HardwareAddr (slice)
+	copy(arr[:], hw)
 	return arr
 }
 func newMatchFromGRPC(request *pb.FlowAddRequest) ofp.Match {
@@ -248,7 +247,6 @@ func exportInstruction(flowMod *ofp.FlowMod) []*pb.Instruction {
 	for _, instr := range flowMod.Instructions {
 		switch inst := instr.(type) {
 		case *ofp.InstructionApplyActions:
-			// ApplyActions instruction türü
 			var actions []*pb.Action
 			for _, action := range inst.Actions {
 				switch act := action.(type) {

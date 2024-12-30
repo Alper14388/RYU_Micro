@@ -19,8 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ConnectionManager_SendFlowMod_FullMethodName   = "/sdn.ConnectionManager/SendFlowMod"
-	ConnectionManager_SendPacketOut_FullMethodName = "/sdn.ConnectionManager/SendPacketOut"
+	ConnectionManager_SendFlowMod_FullMethodName = "/sdn.ConnectionManager/SendFlowMod"
 )
 
 // ConnectionManagerClient is the client API for ConnectionManager service.
@@ -30,7 +29,6 @@ const (
 // Connection Manager Service
 type ConnectionManagerClient interface {
 	SendFlowMod(ctx context.Context, in *FlowModRequest, opts ...grpc.CallOption) (*FlowModResponse, error)
-	SendPacketOut(ctx context.Context, in *PacketOutRequest, opts ...grpc.CallOption) (*PacketOutResponse, error)
 }
 
 type connectionManagerClient struct {
@@ -51,16 +49,6 @@ func (c *connectionManagerClient) SendFlowMod(ctx context.Context, in *FlowModRe
 	return out, nil
 }
 
-func (c *connectionManagerClient) SendPacketOut(ctx context.Context, in *PacketOutRequest, opts ...grpc.CallOption) (*PacketOutResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PacketOutResponse)
-	err := c.cc.Invoke(ctx, ConnectionManager_SendPacketOut_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // ConnectionManagerServer is the server API for ConnectionManager service.
 // All implementations must embed UnimplementedConnectionManagerServer
 // for forward compatibility.
@@ -68,7 +56,6 @@ func (c *connectionManagerClient) SendPacketOut(ctx context.Context, in *PacketO
 // Connection Manager Service
 type ConnectionManagerServer interface {
 	SendFlowMod(context.Context, *FlowModRequest) (*FlowModResponse, error)
-	SendPacketOut(context.Context, *PacketOutRequest) (*PacketOutResponse, error)
 	mustEmbedUnimplementedConnectionManagerServer()
 }
 
@@ -81,9 +68,6 @@ type UnimplementedConnectionManagerServer struct{}
 
 func (UnimplementedConnectionManagerServer) SendFlowMod(context.Context, *FlowModRequest) (*FlowModResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendFlowMod not implemented")
-}
-func (UnimplementedConnectionManagerServer) SendPacketOut(context.Context, *PacketOutRequest) (*PacketOutResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendPacketOut not implemented")
 }
 func (UnimplementedConnectionManagerServer) mustEmbedUnimplementedConnectionManagerServer() {}
 func (UnimplementedConnectionManagerServer) testEmbeddedByValue()                           {}
@@ -124,24 +108,6 @@ func _ConnectionManager_SendFlowMod_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ConnectionManager_SendPacketOut_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PacketOutRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ConnectionManagerServer).SendPacketOut(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ConnectionManager_SendPacketOut_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConnectionManagerServer).SendPacketOut(ctx, req.(*PacketOutRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // ConnectionManager_ServiceDesc is the grpc.ServiceDesc for ConnectionManager service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,10 +118,6 @@ var ConnectionManager_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendFlowMod",
 			Handler:    _ConnectionManager_SendFlowMod_Handler,
-		},
-		{
-			MethodName: "SendPacketOut",
-			Handler:    _ConnectionManager_SendPacketOut_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -265,8 +227,7 @@ var PacketHandler_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	FlowOperation_AddFlow_FullMethodName       = "/sdn.FlowOperation/AddFlow"
-	FlowOperation_SendPacketOut_FullMethodName = "/sdn.FlowOperation/SendPacketOut"
+	FlowOperation_AddFlow_FullMethodName = "/sdn.FlowOperation/AddFlow"
 )
 
 // FlowOperationClient is the client API for FlowOperation service.
@@ -276,7 +237,6 @@ const (
 // Flow Operation Service
 type FlowOperationClient interface {
 	AddFlow(ctx context.Context, in *FlowAddRequest, opts ...grpc.CallOption) (*FlowAddResponse, error)
-	SendPacketOut(ctx context.Context, in *PacketOutRequest, opts ...grpc.CallOption) (*PacketOutResponse, error)
 }
 
 type flowOperationClient struct {
@@ -297,16 +257,6 @@ func (c *flowOperationClient) AddFlow(ctx context.Context, in *FlowAddRequest, o
 	return out, nil
 }
 
-func (c *flowOperationClient) SendPacketOut(ctx context.Context, in *PacketOutRequest, opts ...grpc.CallOption) (*PacketOutResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PacketOutResponse)
-	err := c.cc.Invoke(ctx, FlowOperation_SendPacketOut_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // FlowOperationServer is the server API for FlowOperation service.
 // All implementations must embed UnimplementedFlowOperationServer
 // for forward compatibility.
@@ -314,7 +264,6 @@ func (c *flowOperationClient) SendPacketOut(ctx context.Context, in *PacketOutRe
 // Flow Operation Service
 type FlowOperationServer interface {
 	AddFlow(context.Context, *FlowAddRequest) (*FlowAddResponse, error)
-	SendPacketOut(context.Context, *PacketOutRequest) (*PacketOutResponse, error)
 	mustEmbedUnimplementedFlowOperationServer()
 }
 
@@ -327,9 +276,6 @@ type UnimplementedFlowOperationServer struct{}
 
 func (UnimplementedFlowOperationServer) AddFlow(context.Context, *FlowAddRequest) (*FlowAddResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddFlow not implemented")
-}
-func (UnimplementedFlowOperationServer) SendPacketOut(context.Context, *PacketOutRequest) (*PacketOutResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendPacketOut not implemented")
 }
 func (UnimplementedFlowOperationServer) mustEmbedUnimplementedFlowOperationServer() {}
 func (UnimplementedFlowOperationServer) testEmbeddedByValue()                       {}
@@ -370,24 +316,6 @@ func _FlowOperation_AddFlow_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FlowOperation_SendPacketOut_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PacketOutRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(FlowOperationServer).SendPacketOut(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: FlowOperation_SendPacketOut_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FlowOperationServer).SendPacketOut(ctx, req.(*PacketOutRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // FlowOperation_ServiceDesc is the grpc.ServiceDesc for FlowOperation service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -398,10 +326,6 @@ var FlowOperation_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AddFlow",
 			Handler:    _FlowOperation_AddFlow_Handler,
-		},
-		{
-			MethodName: "SendPacketOut",
-			Handler:    _FlowOperation_SendPacketOut_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -5,7 +5,6 @@ import (
 	"log"
 	"net"
 	"sdn/FlowOperation/flowops/flowadd"
-	"sdn/FlowOperation/flowops/packetout"
 	pb "sdn/common/proto"
 
 	"google.golang.org/grpc"
@@ -17,10 +16,6 @@ type server struct {
 
 func (s *server) AddFlow(ctx context.Context, req *pb.FlowAddRequest) (*pb.FlowAddResponse, error) {
 	return flowadd.AddFlowGRPC(req)
-}
-
-func (s *server) SendPacketOut(ctx context.Context, req *pb.PacketOutRequest) (*pb.PacketOutResponse, error) {
-	return packetout.PacketOutGRPC(req)
 }
 
 func main() {

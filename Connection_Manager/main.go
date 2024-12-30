@@ -46,7 +46,6 @@ func (s *server) SendFlowMod(ctx context.Context, req *pb.FlowModRequest) (*pb.F
 		}, nil
 	}
 
-	// Instructions'ı `req.Instructions` üzerinden çözümleme
 	var instructions ofp.Instructions
 	for _, inst := range req.Instructions {
 		switch inst.Type {
@@ -100,13 +99,12 @@ func (s *server) SendFlowMod(ctx context.Context, req *pb.FlowModRequest) (*pb.F
 	}
 	flowMod.Buffer = ofp.NoBuffer
 	header := make([]byte, 8)
-	header[0] = 4  // OpenFlow 1.3 versiyonu
-	header[1] = 14 // FlowMod mesaj tipi
+	header[0] = 4
+	header[1] = 14
 	size, _ := calculateFlowModSize(&flowMod)
 	binary.BigEndian.PutUint16(header[2:], uint16(8+size)) // Header + Body uzunluğu
 	binary.BigEndian.PutUint32(header[4:], uint32(12345))  // Xid örnek olarak 12345
 
-	// FlowMod'u serialize edin
 	var buf bytes.Buffer
 	if _, err := flowMod.WriteTo(&buf); err != nil {
 		return &pb.FlowModResponse{
@@ -115,7 +113,6 @@ func (s *server) SendFlowMod(ctx context.Context, req *pb.FlowModRequest) (*pb.F
 		}, nil
 	}
 
-	// Header + Body yazın
 	if _, err := c.Write(append(header, buf.Bytes()...)); err != nil {
 		return &pb.FlowModResponse{
 			Success: false,
@@ -129,49 +126,7 @@ func (s *server) SendFlowMod(ctx context.Context, req *pb.FlowModRequest) (*pb.F
 	}, nil
 }
 
-func (s *server) SendPacketOut(ctx context.Context, req *pb.PacketOutRequest) (*pb.PacketOutResponse, error) {
-	var pktOut ofp.PacketOut
-	var actions ofp.Actions
-	for _, protoAction := range req.Actions {
-		ofpAction, err := protoActionToOfp(protoAction)
-		if err != nil {
-			return nil, err
-		}
-		actions = append(actions, ofpAction)
-	}
-	if err := json.Unmarshal(req.Data, &pktOut); err != nil {
-		return &pb.PacketOutResponse{
-			Success: false,
-			Message: fmt.Sprintf("Invalid PacketOut data: %v", err),
-		}, nil
-	}
-
-	s.store.mu.Lock()
-	//c := s.store.conn
-	s.store.mu.Unlock()
-
-	/*if c == nil {
-		return &pb.PacketOutResponse{
-			Success: false,
-			Message: "No switch connection available",
-		}, nil
-	}
-
-	if _, err := pktOut.WriteTo(c); err != nil {
-		return &pb.PacketOutResponse{
-			Success: false,
-			Message: fmt.Sprintf("Error sending PacketOut: %v", err),
-		}, nil
-	}*/
-
-	return &pb.PacketOutResponse{
-		Success: true,
-		Message: "PacketOut sent successfully",
-	}, nil
-}
-
-func (s *server) HandlePacketIn(ctx context.Context, req *pb.PacketInRequest) (*pb.PacketInResponse, error) {
-	// This will be called by Ryu_go service
+func (s *server) HandlePacketIn() (*pb.PacketInResponse, error) {
 	return &pb.PacketInResponse{
 		Success: true,
 		Message: "PacketIn handled",
@@ -179,10 +134,8 @@ func (s *server) HandlePacketIn(ctx context.Context, req *pb.PacketInRequest) (*
 }
 
 func main() {
-	// Start OpenFlow listener
 	go listenAndServeOpenFlow(":6633")
 
-	// Start gRPC server
 	lis, err := net.Listen("tcp", ":8094")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -197,9 +150,6 @@ func main() {
 	}
 }
 
-// ==============================
-// 1) Store yapısı
-// ==============================
 func listenAndServeOpenFlow(addr string) {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -216,15 +166,13 @@ func listenAndServeOpenFlow(addr string) {
 
 		log.Println("[CM] New Switch connection from", conn.RemoteAddr())
 
-		// (Opsiyonel) Birden fazla switch bağlanırsa, her accept için
-		// ayrı bir goroutine açıp handshake yaparsınız.
+		// Birden fazla switch bağlanırsa, her accept için
+		// ayrı bir goroutine
 		go handleSwitchConnection(conn)
 	}
 }
 
-// handleSwitchConnection: Basit OpenFlow handshake + read-loop
 func handleSwitchConnection(conn net.Conn) {
-	// 3.1) Minimal handshake: Okuyup "Hello" al, "Hello" gönder, "FeaturesRequest" vs.
 	if err := doMinimalHandshake(conn); err != nil {
 		log.Println("Handshake failed:", err)
 		conn.Close()
@@ -232,31 +180,24 @@ func handleSwitchConnection(conn net.Conn) {
 	}
 	log.Println("[CM] Handshake OK with switch", conn.RemoteAddr())
 
-	// 3.2) Bu noktada handshake tamam, store.conn'a kaydediyoruz (tek switch varsayımı).
 	store.mu.Lock()
-	// varsa eski connection'ı kapatabiliriz (örneğin sadece 1 switch'e izin veriyoruz)
 	if store.conn != nil {
 		store.conn.Close()
 	}
 	store.conn = conn
 	store.mu.Unlock()
 
-	// 3.3) readFromSwitch: PacketIn (veya diğer OpenFlow msg) bekler
 	readFromSwitch(conn)
 }
 
-// doMinimalHandshake: Hello al, Hello gönder, FeaturesRequest gönder, FeaturesReply bekle
 func doMinimalHandshake(conn net.Conn) error {
-	// 1) Switch'ten Hello (header) al (8 byte)
 	hdr := make([]byte, 8)
 	if _, err := io.ReadFull(conn, hdr); err != nil {
 		return fmt.Errorf("error reading Hello: %v", err)
 	}
-	// header[0] = version, header[1] = type=0(Hello?), vs.
-	// Bu örnekte kontrolleri minimal tutuyoruz
+
 	log.Printf("[CM] Received Hello: version=%d, type=%d\n", hdr[0], hdr[1])
 
-	// 2) Biz de Hello göndereceğiz (8 byte, type=0)
 	hello := make([]byte, 8)
 	hello[0] = hdr[0] // version
 	hello[1] = 0      // type = HELLO
@@ -271,8 +212,8 @@ func doMinimalHandshake(conn net.Conn) error {
 
 	// 3) FeaturesRequest
 	featReq := make([]byte, 8)
-	featReq[0] = hdr[0] // version
-	featReq[1] = 5      // type=FeaturesRequest(5)
+	featReq[0] = hdr[0]
+	featReq[1] = 5
 	binary.BigEndian.PutUint16(featReq[2:], 8)
 	copy(featReq[4:], []byte{0x00, 0x00, 0x00, 0x06})
 
@@ -281,14 +222,11 @@ func doMinimalHandshake(conn net.Conn) error {
 	}
 	log.Println("[CM] Sent FeatureRequest")
 
-	// 4) Switch'ten FeaturesReply beklemek optional.
-	//    1 sn timeout vs.
 	_ = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 
 	featReplyHdr := make([]byte, 8)
 	if _, err := io.ReadFull(conn, featReplyHdr); err != nil {
 		log.Println("[CM] Timeout or error reading FeaturesReply (maybe switch didn't send?) - continuing anyway:", err)
-		// Optional: not returning error, let's keep going.
 	} else {
 		log.Printf("[CM] Received FeaturesReply: version=%d, type=%d\n", featReplyHdr[0], featReplyHdr[1])
 	}
@@ -297,12 +235,10 @@ func doMinimalHandshake(conn net.Conn) error {
 	return nil
 }
 
-// readFromSwitch: Sürekli mesaj bekler, PacketIn veya EchoRequest vb. parse edebilirsiniz
 func readFromSwitch(conn net.Conn) {
 	defer conn.Close()
 
 	for {
-		// 1) Header oku (8 byte)
 		hdr := make([]byte, 8)
 		_, err := io.ReadFull(conn, hdr)
 		if err != nil {
@@ -313,7 +249,6 @@ func readFromSwitch(conn net.Conn) {
 		length := binary.BigEndian.Uint16(hdr[2:4])
 		xid := binary.BigEndian.Uint32(hdr[4:8])
 
-		// 2) Body oku (length - 8)
 		bodyLen := int(length) - 8
 		body := make([]byte, 0)
 		if bodyLen > 0 {
@@ -324,7 +259,6 @@ func readFromSwitch(conn net.Conn) {
 			}
 		}
 
-		// 3) Mesaj tipine göre işlem
 		switch msgType {
 		case 10: // OFPT_PACKET_IN
 			// PacketIn parsing: ofp.PacketIn
@@ -364,7 +298,6 @@ func forwardPacketIn(pktIn ofp.PacketIn) {
 		return
 	}
 
-	// Establish gRPC connection
 	conn, err := grpc.Dial("localhost:8090", grpc.WithInsecure())
 	if err != nil {
 		log.Printf("Failed to connect to PacketHandler service: %v", err)
@@ -374,13 +307,11 @@ func forwardPacketIn(pktIn ofp.PacketIn) {
 
 	client := pb.NewPacketHandlerClient(conn)
 
-	// Create a PacketInRequest
 	req := &pb.PacketInRequest{
 		BufferId: pktIn.Buffer,
-		Data:     data, // JSON serialized data
+		Data:     data,
 	}
 
-	// Send gRPC request
 	resp, err := client.HandlePacketIn(context.Background(), req)
 	if err != nil {
 		log.Printf("Error sending PacketIn via gRPC: %v", err)
@@ -388,18 +319,6 @@ func forwardPacketIn(pktIn ofp.PacketIn) {
 	}
 
 	log.Printf("PacketIn successfully forwarded via gRPC: %+v", resp)
-}
-
-func protoActionToOfp(protoAction *pb.Action) (ofp.Action, error) {
-	switch protoAction.Type {
-	case uint32(ofp.ActionTypeOutput):
-		return &ofp.ActionOutput{
-			Port:   ofp.PortNo(protoAction.Port),
-			MaxLen: uint16(protoAction.MaxLen),
-		}, nil
-	default:
-		return nil, fmt.Errorf("unsupported action type: %v", protoAction.Type)
-	}
 }
 
 func calculateFlowModSize(flowMod *ofp.FlowMod) (int, error) {

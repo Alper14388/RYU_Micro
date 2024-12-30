@@ -39,7 +39,7 @@ func outPortLookup(dpid uint64, dst string) uint32 {
 			return outPort
 		}
 	}
-	return 0xfffffffb // Flood port
+	return 0xfffffffb
 }
 
 func HandlePacketIn(req *pb.PacketInRequest) (*pb.PacketInResponse, error) {
@@ -67,10 +67,6 @@ func HandlePacketIn(req *pb.PacketInRequest) (*pb.PacketInResponse, error) {
 	outPort := outPortLookup(packetInfo.DPID, packetInfo.Dst)
 	if err := addFlowEntry(packetInfo, outPort); err != nil {
 		log.Printf("Error adding flow entry: %v", err)
-	}
-
-	if err := sendPacketOut(packetInfo, outPort); err != nil {
-		log.Printf("Error sending packet out: %v", err)
 	}
 
 	return &pb.PacketInResponse{
@@ -102,27 +98,5 @@ func addFlowEntry(packet utils.PacketData, outPort uint32) error {
 	}
 
 	_, err = client.AddFlow(context.Background(), req)
-	return err
-}
-
-func sendPacketOut(packet utils.PacketData, outPort uint32) error {
-	log.Printf("Sending packet out for packet: %+v\n", packet)
-
-	conn, err := grpc.Dial(FlowOpAddr, grpc.WithInsecure())
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	client := pb.NewFlowOperationClient(conn)
-	req := &pb.PacketOutRequest{
-		SwitchId: packet.DPID,
-		InPort:   packet.InPort,
-		OutPort:  outPort,
-		Data:     packet.Data, // Use the decoded data
-		BufferId: packet.BufferID,
-	}
-
-	_, err = client.SendPacketOut(context.Background(), req)
 	return err
 }

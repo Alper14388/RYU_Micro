@@ -6,7 +6,6 @@ option go_package = "sdn/proto";
 // Connection Manager Service
 service ConnectionManager {
   rpc SendFlowMod (FlowModRequest) returns (FlowModResponse) {}
-  rpc SendPacketOut (PacketOutRequest) returns (PacketOutResponse) {}
 }
 
 service PacketHandler {
@@ -16,24 +15,23 @@ service PacketHandler {
 // Flow Operation Service
 service FlowOperation {
   rpc AddFlow (FlowAddRequest) returns (FlowAddResponse) {}
-  rpc SendPacketOut (PacketOutRequest) returns (PacketOutResponse) {}
 }
 
 // Flow Add Messages
 message FlowAddRequest {
   uint64 switch_id = 1;
   uint32 in_port = 2;
-  string src = 3;          // Ethernet source address
-  string dst = 4;          // Ethernet destination address
+  string src = 3;
+  string dst = 4;
   uint32 out_port = 5;
   uint32 priority = 6;
   uint32 hard_timeout = 7;
   uint32 idle_timeout = 8;
   uint32 buffer_id = 9;
-  uint32 table_id = 10;    // Yeni eklendi
-  uint32 flags = 11;       // Yeni eklendi
-  uint64 cookie = 12;      // Yeni eklendi
-  uint64 cookie_mask = 13; // Yeni eklendi
+  uint32 table_id = 10;
+  uint32 flags = 11;
+  uint64 cookie = 12;
+  uint64 cookie_mask = 13;
 }
 
 message FlowAddResponse {
@@ -43,33 +41,33 @@ message FlowAddResponse {
 
 // Flow Mod Messages
 message FlowModRequest {
-  bytes data = 1;          // JSON encoded FlowMod data
-  uint32 command = 2;      // Yeni eklendi: FlowAdd, FlowModify, FlowDelete vs.
-  uint32 flags = 3;        // Yeni eklendi
-  uint32 table_id = 4;     // Yeni eklendi
+  bytes data = 1;
+  uint32 command = 2;
+  uint32 flags = 3;
+  uint32 table_id = 4;
   repeated Instruction instructions = 5;
 }
 
 message FlowModResponse {
   bool success = 1;
   string message = 2;
-  uint32 error_code = 3;   // Yeni eklendi
+  uint32 error_code = 3;
 }
 
 // Match Field Messages
 message MatchField {
-  uint32 class = 1;        // OpenFlow match field class
-  uint32 field = 2;        // Field type (in_port, eth_src, eth_dst vs.)
-  bytes value = 3;         // Field value
-  bytes mask = 4;          // Optional mask for the field
+  uint32 class = 1;
+  uint32 field = 2;
+  bytes value = 3;
+  bytes mask = 4;
 }
 
 // Action Messages
 message Action {
-  uint32 type = 1;         // Action type (output, set_field vs.)
-  uint32 port = 2;         // For output actions
-  uint32 max_len = 3;      // For output actions
-  bytes data = 4;          // Additional action data
+  uint32 type = 1;
+  uint32 port = 2;
+  uint32 max_len = 3;
+  bytes data = 4;
 }
 
 // Instruction Messages
@@ -79,39 +77,24 @@ message Instruction {
   bytes data = 3;          // Additional instruction data
 }
 
-// Packet Messages
-message PacketOutRequest {
-  uint64 switch_id = 1;
-  uint32 in_port = 2;
-  uint32 out_port = 3;
-  bytes data = 4;          // Raw packet data
-  uint32 buffer_id = 5;
-  repeated Action actions = 6;  // Yeni eklendi
-}
-
-message PacketOutResponse {
-  bool success = 1;
-  string message = 2;
-  uint32 error_code = 3;   // Yeni eklendi
-}
 
 message PacketInRequest {
-  uint64 switch_id = 1;       // Switch ID (Datapath ID)
+  uint64 switch_id = 1;
   uint32 buffer_id = 2;
   uint32 length = 3;
   uint32 reason = 4;
   uint32 table_id = 5;
   uint64 cookie = 6;
-  repeated MatchField match_fields = 7;  // Changed to MatchField
-  bytes data = 8;           // Raw packet data
-  uint32 total_len = 9;     // New field
-  uint32 in_port = 10;      // New field
-  uint32 in_phy_port = 11;  // New field
+  repeated MatchField match_fields = 7;
+  bytes data = 8;
+  uint32 total_len = 9;
+  uint32 in_port = 10;
+  uint32 in_phy_port = 11;
 }
 
 
 message PacketInResponse {
   bool success = 1;
   string message = 2;
-  uint32 error_code = 3;   // Yeni eklendi
+  uint32 error_code = 3;
 }
