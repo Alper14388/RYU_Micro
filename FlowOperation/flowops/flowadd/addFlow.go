@@ -12,9 +12,94 @@ import (
 	"google.golang.org/grpc"
 )
 
+func addBasicFlows(switchId uint64) error {
+	log.Printf("Adding basic flows to switch: %d", switchId)
+
+	arpFlow := &pb.FlowAddRequest{
+		SwitchId:    switchId,
+		Priority:    100,
+		HardTimeout: 0,
+		IdleTimeout: 0,
+		Src:         "",
+		Dst:         "",
+		InPort:      0,
+		OutPort:     uint32(ofp.PortNormal),
+	}
+
+	arpMatch := ofp.Match{
+		Type: ofp.MatchTypeXM,
+		Fields: []ofp.XM{
+			{Class: ofp.XMClassOpenflowBasic, Type: ofp.XMTypeEthType, Value: uint16ToXMValue(0x0806)}, // ARP
+		},
+	}
+	arpFlowMod := newFlowModFromGRPC(arpFlow, arpMatch)
+
+	icmpFlow := &pb.FlowAddRequest{
+		SwitchId:    switchId,
+		Priority:    100,
+		HardTimeout: 0,
+		IdleTimeout: 0,
+		Src:         "",
+		Dst:         "",
+		InPort:      0,
+		OutPort:     uint32(ofp.PortNormal),
+	}
+
+	icmpMatch := ofp.Match{
+		Type: ofp.MatchTypeXM,
+		Fields: []ofp.XM{
+			{Class: ofp.XMClassOpenflowBasic, Type: ofp.XMTypeEthType, Value: uint16ToXMValue(0x0800)}, // IPv4
+			{Class: ofp.XMClassOpenflowBasic, Type: ofp.XMTypeIPProto, Value: uint8ToXMValue(0x01)},    // ICMP
+		},
+	}
+	icmpFlowMod := newFlowModFromGRPC(icmpFlow, icmpMatch)
+	controllerFlow := &pb.FlowAddRequest{
+		SwitchId:    switchId,
+		Priority:    0,
+		HardTimeout: 0,
+		IdleTimeout: 0,
+		Src:         "",
+		Dst:         "",
+		InPort:      0,
+		OutPort:     0,
+	}
+
+	controllerMatch := ofp.Match{
+		Type:   ofp.MatchTypeXM,
+		Fields: []ofp.XM{}, // Default match
+	}
+	controllerFlowMod := newFlowModFromGRPC(controllerFlow, controllerMatch)
+	controllerFlowMod.Instructions = ofp.Instructions{
+		&ofp.InstructionApplyActions{
+			Actions: []ofp.Action{
+				&ofp.ActionOutput{
+					Port:   ofp.PortController,
+					MaxLen: ofp.ContentLenMax,
+				},
+			},
+		},
+	}
+	// Switch'e gönder
+	if err := sendFlowAddToSwitch(arpFlowMod); err != nil {
+		return fmt.Errorf("failed to add ARP flow: %w", err)
+	}
+	if err := sendFlowAddToSwitch(icmpFlowMod); err != nil {
+		return fmt.Errorf("failed to add ICMP flow: %w", err)
+	}
+	if err := sendFlowAddToSwitch(controllerFlowMod); err != nil {
+		return fmt.Errorf("failed to add controller flow: %w", err)
+	}
+	return nil
+}
 func AddFlowGRPC(req *pb.FlowAddRequest) (*pb.FlowAddResponse, error) {
 	log.Println("New flow add request:", req)
-
+	if err := addBasicFlows(req.SwitchId); err != nil {
+		log.Println("Error adding basic flows:", err)
+		return &pb.FlowAddResponse{
+			Success: false,
+			Message: "Failed to add basic flows",
+		}, err
+	}
 	match := newMatchFromGRPC(req)
 	flowMod := newFlowModFromGRPC(req, match)
 	log.Println("FlowMod:", flowMod)
@@ -43,10 +128,22 @@ func uint32ToXMValue(value uint32) ofp.XMValue {
 	return ofp.XMValue(buf)
 }
 
+func uint16ToXMValue(value uint16) ofp.XMValue {
+	buf := make([]byte, 2)
+	buf[0] = byte(value >> 8)
+	buf[1] = byte(value)
+	return ofp.XMValue(buf)
+}
+func uint8ToXMValue(value uint8) ofp.XMValue {
+	buf := make([]byte, 1)
+	buf[0] = byte(value)
+	return ofp.XMValue(buf)
+}
+
 func macStringTo6Byte(s string) [6]byte {
 	hw, err := net.ParseMAC(s) // "00:11:22:33:44:55"
 	if err != nil {
-		// handle error
+		log.Println("ERROR: parsing MAC:", err)
 	}
 	var arr [6]byte
 	copy(arr[:], hw) // hw = net.HardwareAddr (slice)
@@ -73,6 +170,11 @@ func newMatchFromGRPC(request *pb.FlowAddRequest) ofp.Match {
 				Type:  ofp.XMTypeEthDst,
 				Value: ofp.XMValue(destinationMac[:]),
 			},
+			{
+				Class: ofp.XMClassOpenflowBasic,
+				Type:  ofp.XMTypeEthType,
+				Value: uint16ToXMValue(0x0800), // IPv4
+			},
 		},
 	}
 	return match
@@ -90,7 +192,7 @@ func newFlowModFromGRPC(request *pb.FlowAddRequest, match ofp.Match) *ofp.FlowMo
 			&ofp.InstructionApplyActions{
 				Actions: []ofp.Action{
 					&ofp.ActionOutput{
-						Port:   ofp.PortNo(request.OutPort),
+						Port:   ofp.PortNo(ofp.PortNormal),
 						MaxLen: ofp.ContentLenMax,
 					},
 				},
