@@ -72,7 +72,9 @@ func handleSwitchConnection(conn net.Conn) {
 	}
 	store.conn = conn
 	store.mu.Unlock()
-
+	if err := buildDefaultFlow(conn); err != nil {
+		log.Println("Build default flow failed:", err)
+	}
 	readFromSwitch(conn)
 }
 
@@ -262,4 +264,37 @@ func (s *Server) HandlePacketIn() (*pb.PacketInResponse, error) {
 
 func GetStore() *Store {
 	return store
+}
+
+func buildDefaultFlow(conn net.Conn) error {
+	defaultFlow := ofp.FlowMod{
+		Buffer:   ofp.NoBuffer,
+		Table:    0,
+		Command:  ofp.FlowAdd,
+		Priority: 0,
+		Match: ofp.Match{
+			Type:   ofp.MatchTypeXM,
+			Fields: []ofp.XM{},
+		},
+		IdleTimeout: 0,
+		HardTimeout: 0,
+		Instructions: ofp.Instructions{
+			&ofp.InstructionApplyActions{
+				Actions: []ofp.Action{
+					&ofp.ActionOutput{
+						Port:   ofp.PortController,
+						MaxLen: 65535,
+					},
+				},
+			},
+		},
+	}
+
+	if err := utils.SendHeaderandBuffer(conn, defaultFlow); err != nil {
+		log.Printf("Failed to send default FlowMod: %v", err)
+		return err
+	}
+
+	log.Println("[CM] Default FlowMod sent successfully")
+	return nil
 }
