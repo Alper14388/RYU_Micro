@@ -82,7 +82,10 @@ func addFlowEntry(packet utils.PacketData, outPort uint32) error {
 		return err
 	}
 	defer conn.Close()
-
+	priority := uint32(1)
+	if packet.EtherType == 0x0800 && packet.IPProto == 1 { // ICMP kontrolü
+		priority = 10
+	}
 	client := pb.NewFlowOperationClient(conn)
 	req := &pb.FlowAddRequest{
 		SwitchId:    packet.DPID,
@@ -90,9 +93,9 @@ func addFlowEntry(packet utils.PacketData, outPort uint32) error {
 		Dst:         packet.Dst,
 		InPort:      packet.InPort,
 		OutPort:     outPort,
-		Priority:    1,
-		HardTimeout: 30,
-		IdleTimeout: 30,
+		Priority:    priority,
+		HardTimeout: 300,
+		IdleTimeout: 60,
 		BufferId:    packet.BufferID,
 		EthType:     uint64(packet.EtherType),
 		IPProto:     uint64(packet.IPProto),
