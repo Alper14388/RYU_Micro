@@ -1,0 +1,13 @@
+replicaCount: 1
+
+connectionManager:
+  image: docker.io/alper1438/sdn-controller:connection-manager
+  port: 8094
+
+flowAdd:
+  image: docker.io/alper1438/sdn-controller:flowadd
+  port: 8092
+
+packetHandler:
+  image: docker.io/alper1438/sdn-controller:packethandler
+  port: 8090

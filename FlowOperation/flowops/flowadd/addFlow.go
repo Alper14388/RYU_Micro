@@ -121,7 +121,7 @@ func sendFlowAddToSwitch(flowMod *ofp.FlowMod) error {
 		return err
 	}
 
-	conn, err := grpc.Dial("localhost:8094", grpc.WithInsecure())
+	conn, err := grpc.Dial("sdn-controller-service.default.svc.cluster.local:8094", grpc.WithInsecure())
 	if err != nil {
 		log.Printf("Failed to connect to Connection Manager: %v", err)
 		return err

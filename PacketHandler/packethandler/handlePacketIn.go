@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	FlowOpAddr = "localhost:8092"
+	FlowOpAddr = "flowadd-service.default.svc.cluster.local:8092"
 )
 
 var macToPort = make(map[uint64]map[string]uint32)

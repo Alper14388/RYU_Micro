@@ -148,6 +148,11 @@ func readFromSwitch(conn net.Conn) {
 		}
 
 		switch msgType {
+		case 6:
+			bodyLen := int(length) - 8
+			body := make([]byte, bodyLen)
+			dpid := binary.BigEndian.Uint64(body[0:8])
+			log.Println("dpid ", dpid) //TODO
 		case 10: // OFPT_PACKET_IN
 			// PacketIn parsing: ofp.PacketIn
 			var pktIn ofp.PacketIn
@@ -179,7 +184,7 @@ func readFromSwitch(conn net.Conn) {
 func forwardPacketIn(pktIn ofp.PacketIn) {
 	log.Printf("Forwarding PacketIn via gRPC: %+v", pktIn)
 
-	conn, err := grpc.Dial("localhost:8090", grpc.WithInsecure())
+	conn, err := grpc.Dial("packet-handler-service.default.svc.cluster.local:8090", grpc.WithInsecure())
 	if err != nil {
 		log.Printf("Failed to connect to PacketHandler service: %v", err)
 		return

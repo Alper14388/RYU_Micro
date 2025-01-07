@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}-connection-manager
+  labels:
+    app: sdn-controller
+    component: connection-manager
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: sdn-controller
+      component: connection-manager
+  template:
+    metadata:
+      labels:
+        app: sdn-controller
+        component: connection-manager
+    spec:
+      containers:
+        - name: connection-manager
+          image: {{ .Values.connectionManager.image }}
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 6633
+            name: openflow
+          - containerPort: 8094
+            name: grpc
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}-flowadd
+  labels:
+    app: sdn-controller
+    component: flowadd
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: sdn-controller
+      component: flowadd
+  template:
+    metadata:
+      labels:
+        app: sdn-controller
+        component: flowadd
+    spec:
+      containers:
+        - name: flowadd
+          image: {{ .Values.flowAdd.image }}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: {{ .Values.flowAdd.port }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}-packethandler
+  labels:
+    app: sdn-controller
+    component: packet-handler
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: sdn-controller
+      component: packet-handler
+  template:
+    metadata:
+      labels:
+        app: sdn-controller
+        component: packet-handler
+    spec:
+      containers:
+        - name: packet-handler
+          image: {{ .Values.packetHandler.image }}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: {{ .Values.packetHandler.port }}

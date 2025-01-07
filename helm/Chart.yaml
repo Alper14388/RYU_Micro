@@ -1,0 +1,5 @@
+apiVersion: v2
+name: sdn-controller
+description: Helm chart for connection_manager, flowadd, and packethandler services
+version: 1.0.0
+appVersion: "1.0.0"
