@@ -18,18 +18,6 @@ This project implements a microservices-based SDN controller using **Go (Golang)
   - **Mininet**: Simulates SDN environments for controlled testing.
   - **gRPC & Protocol Buffers**: Enables efficient communication between microservices.
 
-- **Performance**:
-  - Low latency (0.072 ms average for 100 ICMP packets).
-  - Minimal memory footprint (13 MB vs. 49 MB for RYU).
-  - Seamless scaling and fault recovery.
-
-## Architecture
-
-The system is composed of the following microservices:
-
-1. **Connection Manager**: Establishes and maintains communication with the OpenFlow switch.
-2. **PacketHandler**: Interprets and processes incoming packets.
-3. **FlowAdd**: Adds flow rules based on packet properties.
 
 Each microservice runs as a containerized application managed by Kubernetes, ensuring independent scalability and fault isolation.
 
@@ -76,20 +64,6 @@ Each microservice runs as a containerized application managed by Kubernetes, ens
   kubectl logs -l app=flow-add
   ```
 
-- Access Kubernetes Dashboard for detailed resource utilization and scaling insights.
-
-## Results
-
-- **Latency**: Achieved an average of **0.072 ms** for 100 ICMP packets.
-- **Memory Usage**: Only **13 MB**, compared to 49 MB for RYU.
-- **Fault Tolerance**: Seamless recovery during Kubernetes replica crashes.
-
-## Future Work
-
-- Implementing flow deletion capabilities.
-- Enhancing Quality of Service (QoS) metrics.
-- Adding security features to prevent potential threats.
-- Exploring machine learning-based optimizations for traffic analysis.
 
 ## License
 
@@ -98,8 +72,3 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 ## Contributors
 
 - **Alper Sağnak**
-
-## References
-
-1. Arzo et al., "MSN: A Playground Framework for Design and Evaluation of MicroServices-Based SDN Controller."
-2. Hölscher et al., "Evaluation of an SDN-based Microservice Architecture."
